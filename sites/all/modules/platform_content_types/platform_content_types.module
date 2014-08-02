@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the Platform Content Types feature.
+ */
+
+include_once 'platform_content_types.features.inc';

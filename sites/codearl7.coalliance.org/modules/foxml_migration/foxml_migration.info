@@ -1,0 +1,5 @@
+name = FoxML Migration
+description = FoxML Migration scripts.
+core = 7.x
+version = 7.x-dev
+dependencies[] = islandora

@@ -1,0 +1,424 @@
+/**
+ * @file
+ * Page Styling
+ *
+ * Style the markup found in page.tpl.php. Also includes some styling of
+ * miscellaneous Drupal elements that appear in the $content variable, such as
+ * ul.links, .pager, .more-link, etc.
+ */
+@media -sass-debug-info{filename{font-family:file\:\/\/\/var\/www\/drupal7\/sites\/all\/themes\/ir7\/sass\/pages\.scss}line{font-family:\0000316}}
+#page-title {
+  background: none !important;
+  font-weight: normal;
+}
+
+/*
+ * The skip-link link will be completely hidden until a user tabs to the link.
+ * See the element-focusable rule in system.base.css.
+ */
+@media -sass-debug-info{filename{font-family:file\:\/\/\/var\/www\/drupal7\/sites\/all\/themes\/ir7\/sass\/pages\.scss}line{font-family:\0000326}}
+#skip-link {
+  margin: 0;
+}
+@media -sass-debug-info{filename{font-family:file\:\/\/\/var\/www\/drupal7\/sites\/all\/themes\/ir7\/sass\/pages\.scss}line{font-family:\0000330}}
+#skip-link a,
+#skip-link a:visited {
+  display: block;
+  width: 100%;
+  padding: 2px 0 3px 0;
+  text-align: center;
+  background-color: #666;
+  color: #fff;
+}
+
+/*
+ * Searching
+ */
+@media -sass-debug-info{filename{font-family:file\:\/\/\/var\/www\/drupal7\/sites\/all\/themes\/ir7\/sass\/pages\.scss}line{font-family:\0000344}}
+.islandora-solr-search-result {
+  border-top: 1px solid #ccc;
+  border-bottom: 1px solid #ccc;
+  background: #f7f9f6;
+  box-shadow: 0 3px 3px -3px #808184;
+}
+
+@media -sass-debug-info{filename{font-family:file\:\/\/\/var\/www\/drupal7\/sites\/all\/themes\/ir7\/sass\/pages\.scss}line{font-family:\0000351}}
+.islandora-solr-search-results {
+  margin-top: 3em;
+}
+
+@media -sass-debug-info{filename{font-family:file\:\/\/\/var\/www\/drupal7\/sites\/all\/themes\/ir7\/sass\/pages\.scss}line{font-family:\0000355}}
+.solr-fields dt, .solr-fields dd {
+  border-top: 1px solid #EEF0ED;
+}
+
+@media -sass-debug-info{filename{font-family:file\:\/\/\/var\/www\/drupal7\/sites\/all\/themes\/ir7\/sass\/pages\.scss}line{font-family:\0000358}}
+dl.solr-fields {
+  border-top: none;
+  float: right;
+  width: 83%;
+}
+
+@media -sass-debug-info{filename{font-family:file\:\/\/\/var\/www\/drupal7\/sites\/all\/themes\/ir7\/sass\/pages\.scss}line{font-family:\0000364}}
+dl.solr-thumb {
+  float: left;
+  width: 15%;
+  margin: 2% 0 2% 1%;
+}
+
+/*
+ * Header
+ */
+/*Accordion Rotator */
+@media -sass-debug-info{filename{font-family:file\:\/\/\/var\/www\/drupal7\/sites\/all\/themes\/ir7\/sass\/pages\.scss}line{font-family:\0000376}}
+div.accordion_button.next {
+  margin-right: 5px;
+}
+
+@media -sass-debug-info{filename{font-family:file\:\/\/\/var\/www\/drupal7\/sites\/all\/themes\/ir7\/sass\/pages\.scss}line{font-family:\0000379}}
+div.accordion_button.previous {
+  margin-left: 5px;
+}
+
+@media -sass-debug-info{filename{font-family:file\:\/\/\/var\/www\/drupal7\/sites\/all\/themes\/ir7\/sass\/pages\.scss}line{font-family:\0000386}}
+.logged-in.not-front #header {
+  padding-top: 1.25em;
+}
+
+@media -sass-debug-info{filename{font-family:file\:\/\/\/var\/www\/drupal7\/sites\/all\/themes\/ir7\/sass\/pages\.scss}line{font-family:\0000390}}
+#logo {
+  /* Wrapping link for logo */
+  float: left;
+  /* LTR */
+  margin: 0;
+  padding: 0;
+}
+@media -sass-debug-info{filename{font-family:file\:\/\/\/var\/www\/drupal7\/sites\/all\/themes\/ir7\/sass\/pages\.scss}line{font-family:\0000395}}
+#logo img {
+  vertical-align: bottom;
+}
+
+@media -sass-debug-info{filename{font-family:file\:\/\/\/var\/www\/drupal7\/sites\/all\/themes\/ir7\/sass\/pages\.scss}line{font-family:\00003100}}
+#name-and-slogan {
+  /* Wrapper for website name and slogan */
+  float: left;
+  margin-left: 2%;
+  margin-top: -0.2em;
+}
+
+@media -sass-debug-info{filename{font-family:file\:\/\/\/var\/www\/drupal7\/sites\/all\/themes\/ir7\/sass\/pages\.scss}line{font-family:\00003106}}
+#site-name {
+  /* The name of the website */
+  margin: 0;
+  font-size: 1.5em;
+  line-height: 1.5em;
+  font-weight: normal;
+  color: #5A5B5D;
+}
+@media -sass-debug-info{filename{font-family:file\:\/\/\/var\/www\/drupal7\/sites\/all\/themes\/ir7\/sass\/pages\.scss}line{font-family:\00003113}}
+#site-name a:link,
+#site-name a:visited {
+  color: #5A5B5D;
+  text-decoration: none;
+}
+@media -sass-debug-info{filename{font-family:file\:\/\/\/var\/www\/drupal7\/sites\/all\/themes\/ir7\/sass\/pages\.scss}line{font-family:\00003119}}
+#site-name a:hover,
+#site-name a:focus {
+  text-decoration: underline;
+}
+
+@media -sass-debug-info{filename{font-family:file\:\/\/\/var\/www\/drupal7\/sites\/all\/themes\/ir7\/sass\/pages\.scss}line{font-family:\00003124}}
+#site-slogan {
+  /* The slogan (or tagline) of a website */
+  margin: 0;
+  font-size: 1em;
+  color: #A14243;
+  font-weight: normal;
+}
+
+@media -sass-debug-info{filename{font-family:file\:\/\/\/var\/www\/drupal7\/sites\/all\/themes\/ir7\/sass\/pages\.scss}line{font-family:\00003131}}
+.region-header {
+  /* Wrapper for any blocks placed in the header region */
+  clear: both;
+  /* Clear the logo */
+}
+
+/*
+ * Main (container for everything else)
+ */
+@media -sass-debug-info{filename{font-family:file\:\/\/\/var\/www\/drupal7\/sites\/all\/themes\/ir7\/sass\/pages\.scss}line{font-family:\00003139}}
+#main {
+  background: none !important;
+}
+
+/*
+ * Content
+ */
+@media -sass-debug-info{filename{font-family:file\:\/\/\/var\/www\/drupal7\/sites\/all\/themes\/ir7\/sass\/pages\.scss}line{font-family:\00003147}}
+#content {
+  box-shadow: 0 0 5px 1px rgba(38, 37, 38, 0.3);
+  background: #fff;
+  padding: 1.5em 1em;
+}
+
+@media -sass-debug-info{filename{font-family:file\:\/\/\/var\/www\/drupal7\/sites\/all\/themes\/ir7\/sass\/pages\.scss}line{font-family:\00003153}}
+.front #content {
+  padding: 0;
+  background: none;
+  box-shadow: none;
+}
+
+@media -sass-debug-info{filename{font-family:file\:\/\/\/var\/www\/drupal7\/sites\/all\/themes\/ir7\/sass\/pages\.scss}line{font-family:\00003162}}
+.breadcrumb {
+  /* The path to the current page in the form of a list of links */
+  font-size: 70%;
+  letter-spacing: 0.6pt;
+  line-height: 1.5em;
+  padding-left: 9px;
+}
+@media -sass-debug-info{filename{font-family:file\:\/\/\/var\/www\/drupal7\/sites\/all\/themes\/ir7\/sass\/pages\.scss}line{font-family:\00003167}}
+.breadcrumb ol {
+  margin: 0;
+  padding: 0;
+}
+@media -sass-debug-info{filename{font-family:file\:\/\/\/var\/www\/drupal7\/sites\/all\/themes\/ir7\/sass\/pages\.scss}line{font-family:\00003171}}
+.breadcrumb li {
+  border-radius: 3px 3px 3px 3px;
+  display: inline-block;
+  list-style-type: none;
+  margin: 5px 0;
+  padding: 2px 5px 4px;
+}
+@media -sass-debug-info{filename{font-family:file\:\/\/\/var\/www\/drupal7\/sites\/all\/themes\/ir7\/sass\/pages\.scss}line{font-family:\00003178}}
+.breadcrumb li a:hover {
+  color: #888;
+}
+@media -sass-debug-info{filename{font-family:file\:\/\/\/var\/www\/drupal7\/sites\/all\/themes\/ir7\/sass\/pages\.scss}line{font-family:\00003182}}
+.breadcrumb li:hover {
+  background: #F7F9F6;
+}
+@media -sass-debug-info{filename{font-family:file\:\/\/\/var\/www\/drupal7\/sites\/all\/themes\/ir7\/sass\/pages\.scss}line{font-family:\00003185}}
+.breadcrumb .islandora-solr-breadcrumb-super {
+  font-size: 100%;
+  position: relative;
+  left: 1px;
+  top: 4px;
+}
+@media -sass-debug-info{filename{font-family:file\:\/\/\/var\/www\/drupal7\/sites\/all\/themes\/ir7\/sass\/pages\.scss}line{font-family:\00003189}}
+.breadcrumb .islandora-solr-breadcrumb-super a {
+  color: #222;
+}
+@media -sass-debug-info{filename{font-family:file\:\/\/\/var\/www\/drupal7\/sites\/all\/themes\/ir7\/sass\/pages\.scss}line{font-family:\00003192}}
+.breadcrumb .islandora-solr-breadcrumb-super a:hover {
+  color: red;
+}
+
+@media -sass-debug-info{filename{font-family:file\:\/\/\/var\/www\/drupal7\/sites\/all\/themes\/ir7\/sass\/pages\.scss}line{font-family:\00003203}}
+h1.title,
+h2.node-title,
+h2.block-title,
+h2.title,
+h2.comment-form,
+h3.title {
+  /* Comment title */
+  margin: 0;
+  color: #5A5B5D !important;
+}
+
+@media -sass-debug-info{filename{font-family:file\:\/\/\/var\/www\/drupal7\/sites\/all\/themes\/ir7\/sass\/pages\.scss}line{font-family:\00003208}}
+tr.even {
+  /* Some tables have rows marked even or odd. */
+  /* background-color: #eee; */
+  /* Drupal core uses a #eee background */
+}
+
+@media -sass-debug-info{filename{font-family:file\:\/\/\/var\/www\/drupal7\/sites\/all\/themes\/ir7\/sass\/pages\.scss}line{font-family:\00003212}}
+tr.odd {
+  /* background-color: #eee; */
+  /* Drupal core uses a #eee background */
+}
+
+@media -sass-debug-info{filename{font-family:file\:\/\/\/var\/www\/drupal7\/sites\/all\/themes\/ir7\/sass\/pages\.scss}line{font-family:\00003216}}
+div.messages {
+  /* Important messages (status, warning, and error) for the user. See also the declarations in messages.css. */
+  margin: 1.5em 0;
+  /* Drupal core uses "6px 0" margin */
+}
+@media -sass-debug-info{filename{font-family:file\:\/\/\/var\/www\/drupal7\/sites\/all\/themes\/ir7\/sass\/pages\.scss}line{font-family:\00003219}}
+div.messages ul {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+@media -sass-debug-info{filename{font-family:file\:\/\/\/var\/www\/drupal7\/sites\/all\/themes\/ir7\/sass\/pages\.scss}line{font-family:\00003225}}
+div.status {
+  /* Normal priority messages */
+}
+
+@media -sass-debug-info{filename{font-family:file\:\/\/\/var\/www\/drupal7\/sites\/all\/themes\/ir7\/sass\/pages\.scss}line{font-family:\00003229}}
+div.warning,
+tr.warning {
+  /* Medium priority messages */
+  /* border: 1px solid #f0c020; */
+  /* Drupal core uses: 1px solid #f0c020 */
+}
+
+@media -sass-debug-info{filename{font-family:file\:\/\/\/var\/www\/drupal7\/sites\/all\/themes\/ir7\/sass\/pages\.scss}line{font-family:\00003234}}
+div.error,
+tr.error {
+  /* High priority messages. See also the .error declaration below. */
+}
+
+@media -sass-debug-info{filename{font-family:file\:\/\/\/var\/www\/drupal7\/sites\/all\/themes\/ir7\/sass\/pages\.scss}line{font-family:\00003237}}
+.error {
+  /* Errors that are separate from div.messages status messages. */
+  /* color: #e55; */
+  /* Drupal core uses a #e55 background */
+}
+
+@media -sass-debug-info{filename{font-family:file\:\/\/\/var\/www\/drupal7\/sites\/all\/themes\/ir7\/sass\/pages\.scss}line{font-family:\00003241}}
+.warning {
+  /* Warnings that are separate from div.messages status messages. */
+  /* color: #e09010; */
+  /* Drupal core uses a #e09010 background */
+}
+
+@media -sass-debug-info{filename{font-family:file\:\/\/\/var\/www\/drupal7\/sites\/all\/themes\/ir7\/sass\/pages\.scss}line{font-family:\00003245}}
+.tabs {
+  /* See also the tabs.css file. */
+}
+
+@media -sass-debug-info{filename{font-family:file\:\/\/\/var\/www\/drupal7\/sites\/all\/themes\/ir7\/sass\/pages\.scss}line{font-family:\00003248}}
+.region-help {
+  /* Help text on a page */
+}
+
+@media -sass-debug-info{filename{font-family:file\:\/\/\/var\/www\/drupal7\/sites\/all\/themes\/ir7\/sass\/pages\.scss}line{font-family:\00003251}}
+.more-help-link {
+  /* Link to more help */
+}
+
+@media -sass-debug-info{filename{font-family:file\:\/\/\/var\/www\/drupal7\/sites\/all\/themes\/ir7\/sass\/pages\.scss}line{font-family:\00003254}}
+.region-content {
+  /* Wrapper for the actual page content */
+}
+
+@media -sass-debug-info{filename{font-family:file\:\/\/\/var\/www\/drupal7\/sites\/all\/themes\/ir7\/sass\/pages\.scss}line{font-family:\00003257}}
+ul.inline {
+  /* List of links generated by theme_links() */
+  display: inline;
+  padding: 0;
+}
+@media -sass-debug-info{filename{font-family:file\:\/\/\/var\/www\/drupal7\/sites\/all\/themes\/ir7\/sass\/pages\.scss}line{font-family:\00003261}}
+ul.inline li {
+  display: inline;
+  list-style-type: none;
+  padding: 0 1em 0 0;
+  /* LTR */
+}
+
+@media -sass-debug-info{filename{font-family:file\:\/\/\/var\/www\/drupal7\/sites\/all\/themes\/ir7\/sass\/pages\.scss}line{font-family:\00003267}}
+span.field-label {
+  /* The inline field label used by the Fences module */
+  padding: 0 1em 0 0;
+  /* LTR */
+}
+
+@media -sass-debug-info{filename{font-family:file\:\/\/\/var\/www\/drupal7\/sites\/all\/themes\/ir7\/sass\/pages\.scss}line{font-family:\00003271}}
+.item-list .pager {
+  /* A list of page numbers when more than 1 page of content is available */
+  padding: 0;
+}
+@media -sass-debug-info{filename{font-family:file\:\/\/\/var\/www\/drupal7\/sites\/all\/themes\/ir7\/sass\/pages\.scss}line{font-family:\00003274}}
+.item-list .pager li {
+  /* Each page number in the pager list */
+  padding: 0 0.5em;
+}
+
+@media -sass-debug-info{filename{font-family:file\:\/\/\/var\/www\/drupal7\/sites\/all\/themes\/ir7\/sass\/pages\.scss}line{font-family:\00003279}}
+ul.pager li.pager-current {
+  background: none repeat scroll 0 0 #CCCECF;
+  border: 1px solid #98012E;
+  color: #5A5B5D;
+}
+
+@media -sass-debug-info{filename{font-family:file\:\/\/\/var\/www\/drupal7\/sites\/all\/themes\/ir7\/sass\/pages\.scss}line{font-family:\00003285}}
+.feed-icon {
+  /* The link to the RSS or Atom feed for the current list of content */
+}
+
+@media -sass-debug-info{filename{font-family:file\:\/\/\/var\/www\/drupal7\/sites\/all\/themes\/ir7\/sass\/pages\.scss}line{font-family:\00003288}}
+.more-link {
+  /* Aggregator, blog, and forum more link */
+}
+
+@media -sass-debug-info{filename{font-family:file\:\/\/\/var\/www\/drupal7\/sites\/all\/themes\/ir7\/sass\/pages\.scss}line{font-family:\00003291}}
+#google-pdf-viewer {
+  padding-top: 1.5em;
+}
+
+@media -sass-debug-info{filename{font-family:file\:\/\/\/var\/www\/drupal7\/sites\/all\/themes\/ir7\/sass\/pages\.scss}line{font-family:\00003295}}
+.islandora-pdf-link {
+  float: right;
+}
+
+@media -sass-debug-info{filename{font-family:file\:\/\/\/var\/www\/drupal7\/sites\/all\/themes\/ir7\/sass\/pages\.scss}line{font-family:\00003300}}
+.islandora-pdf-sidebar ul {
+  padding: 0 1em;
+}
+
+/* Download button for Book Solution Pack */
+@media -sass-debug-info{filename{font-family:file\:\/\/\/var\/www\/drupal7\/sites\/all\/themes\/ir7\/sass\/pages\.scss}line{font-family:\00003307}}
+a.dwn_btn {
+  background-color: #DEDEDE;
+  border: 1px solid #BBB;
+  border-radius: 4px;
+  color: #333333;
+  letter-spacing: 1px;
+  padding: 0.5em 1em;
+  text-align: center;
+  transition: background-color 0.3s ease 0s;
+  margin: 1.5em 0;
+  display: block;
+  width: 7em;
+}
+
+@media -sass-debug-info{filename{font-family:file\:\/\/\/var\/www\/drupal7\/sites\/all\/themes\/ir7\/sass\/pages\.scss}line{font-family:\00003320}}
+a.dwn_btn:hover {
+  background-color: #E9E9E9;
+  border: 1px solid #F2F2F2;
+  color: #121738;
+}
+
+/*
+ * First sidebar (on left in LTR languages, on right in RTL)
+ *
+ * Remember to NOT add padding or margin to your .region-sidebar-first
+ * (see the layout.css file.)
+ */
+@media -sass-debug-info{filename{font-family:file\:\/\/\/var\/www\/drupal7\/sites\/all\/themes\/ir7\/sass\/pages\.scss}line{font-family:\00003333}}
+.region-sidebar-first {
+  font-size: 80%;
+}
+
+/*
+ * Second sidebar (on right in LTR languages, on left in RTL)
+ *
+ * Remember to NOT add padding or margin to your .region-sidebar-second
+ * (see the layout.css file.)
+ */
+/*
+ * Footer
+ */
+@media -sass-debug-info{filename{font-family:file\:\/\/\/var\/www\/drupal7\/sites\/all\/themes\/ir7\/sass\/pages\.scss}line{font-family:\00003351}}
+#footer {
+  margin-top: 1.8em;
+}
+
+/*
+ * Page bottom
+ */
+@media -sass-debug-info{filename{font-family:file\:\/\/\/var\/www\/drupal7\/sites\/all\/themes\/ir7\/sass\/pages\.scss}line{font-family:\00003359}}
+.region-bottom {
+  /* Wrapper for any blocks placed in the page bottom region */
+}

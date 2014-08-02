@@ -1,0 +1,80 @@
+<?php
+
+$view = new view();
+$view->name = 'object_visitors_by_month';
+$view->description = 'Google Analytics integration, views by month';
+$view->tag = 'islandora';
+$view->base_table = 'google_analytics';
+$view->human_name = 'Views by month';
+$view->core = 7;
+$view->api_version = '3.0';
+$view->disabled = FALSE; /* Edit this to true to make a default view disabled initially */
+
+/* Display: Master */
+$handler = $view->new_display('default', 'Master', 'default');
+$handler->display->display_options['title'] = 'Object Views By Month';
+$handler->display->display_options['use_more_always'] = FALSE;
+$handler->display->display_options['access']['type'] = 'none';
+$handler->display->display_options['cache']['type'] = 'none';
+$handler->display->display_options['query']['type'] = 'views_query';
+$handler->display->display_options['exposed_form']['type'] = 'basic';
+$handler->display->display_options['pager']['type'] = 'none';
+$handler->display->display_options['pager']['options']['offset'] = '0';
+$handler->display->display_options['style_plugin'] = 'table';
+$handler->display->display_options['style_options']['columns'] = array(
+  'month' => 'month',
+  'visits' => 'visits',
+);
+$handler->display->display_options['style_options']['default'] = '-1';
+$handler->display->display_options['style_options']['info'] = array(
+  'month' => array(
+    'sortable' => 0,
+    'default_sort_order' => 'asc',
+    'align' => '',
+    'separator' => '',
+    'empty_column' => 0,
+  ),
+  'visits' => array(
+    'sortable' => 0,
+    'default_sort_order' => 'asc',
+    'align' => '',
+    'separator' => '',
+    'empty_column' => 0,
+  ),
+);
+/* Field: Time Dimensions: ga:month */
+$handler->display->display_options['fields']['month']['id'] = 'month';
+$handler->display->display_options['fields']['month']['table'] = 'google_analytics';
+$handler->display->display_options['fields']['month']['field'] = 'month';
+$handler->display->display_options['fields']['month']['label'] = 'Month';
+/* Field: Session Metrics: ga:visits */
+$handler->display->display_options['fields']['visits']['id'] = 'visits';
+$handler->display->display_options['fields']['visits']['table'] = 'google_analytics';
+$handler->display->display_options['fields']['visits']['field'] = 'visits';
+$handler->display->display_options['fields']['visits']['label'] = 'Visits';
+/* Sort criterion: Session Metrics: ga:visits */
+$handler->display->display_options['sorts']['visits']['id'] = 'visits';
+$handler->display->display_options['sorts']['visits']['table'] = 'google_analytics';
+$handler->display->display_options['sorts']['visits']['field'] = 'visits';
+$handler->display->display_options['sorts']['visits']['order'] = 'DESC';
+/* Contextual filter: Page Tracking Dimensions: ga:pagePath */
+$handler->display->display_options['arguments']['pagePath']['id'] = 'pagePath';
+$handler->display->display_options['arguments']['pagePath']['table'] = 'google_analytics';
+$handler->display->display_options['arguments']['pagePath']['field'] = 'pagePath';
+$handler->display->display_options['arguments']['pagePath']['default_action'] = 'default';
+$handler->display->display_options['arguments']['pagePath']['default_argument_type'] = 'php';
+$handler->display->display_options['arguments']['pagePath']['default_argument_options']['code'] = 'return urldecode(request_uri());';
+$handler->display->display_options['arguments']['pagePath']['summary']['number_of_records'] = '0';
+$handler->display->display_options['arguments']['pagePath']['summary']['format'] = 'default_summary';
+$handler->display->display_options['arguments']['pagePath']['summary_options']['items_per_page'] = '25';
+/* Filter criterion: Session Metrics: ga:visits */
+$handler->display->display_options['filters']['visits']['id'] = 'visits';
+$handler->display->display_options['filters']['visits']['table'] = 'google_analytics';
+$handler->display->display_options['filters']['visits']['field'] = 'visits';
+$handler->display->display_options['filters']['visits']['operator'] = '!=';
+$handler->display->display_options['filters']['visits']['value']['value'] = '0';
+
+/* Display: Block */
+$handler = $view->new_display('block', 'Block', 'block');
+$handler->display->display_options['defaults']['hide_admin_links'] = FALSE;
+

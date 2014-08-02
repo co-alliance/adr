@@ -1,0 +1,58 @@
+/* Conflicting with theme styles, but may need to be re-applied
+**
+#main {
+	padding-top:20px;
+
+     background-color: #ffffff;
+	width: 900px;
+	margin: 30px auto ;
+	
+	-moz-border-radius: 10px;
+	-webkit-border-radius: 10px;
+	-khtml-border-radius: 10px;
+	border-radius: 10px;
+}*/
+
+#center {
+	width: 802px;
+	margin: 0px auto ;
+}
+
+#accordion1{
+	margin: 0px auto ;
+	margin-bottom:20px;
+}
+
+div.example{
+	padding-bottom:30px;
+	padding-top:30px;
+	
+	border-bottom:solid;
+	border-bottom-color:#CCCCCC;
+	border-bottom-width:1px;
+}
+
+div.example .imageEx{
+	margin-bottom:5px;
+	
+	border:solid;
+	border-color:#cccccc;
+	border-width:1px;
+}
+
+div.active{
+	opacity:0.5;
+	
+}
+
+div.notActive{
+	-webkit-transition: opacity 0.3s ease-out;
+	-moz-transition: opacity 0.3s ease-out;
+	transition: opacity 0.3s ease-out;
+	opacity:1;
+	
+}
+
+div.notActive:hover{
+	opacity:0.9;
+}

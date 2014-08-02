@@ -1,0 +1,5 @@
+name = CoAlliance FoxML Migration
+description = CoAlliance FoxML Migration script
+core = 7.x
+version = 7.x-dev
+dependencies[] = islandora

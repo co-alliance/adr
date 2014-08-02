@@ -1,0 +1,5 @@
+name = CoAlliance Derivative Generation	 
+description = CoAlliance Derivative Generation script
+core = 7.x
+version = 7.x-dev
+dependencies[] = islandora
