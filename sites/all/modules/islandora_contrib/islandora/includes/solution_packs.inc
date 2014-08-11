@@ -367,7 +367,7 @@ function islandora_install_solution_pack($module, $op = 'install', $force = FALS
   $t = get_t();
 
   // Some general replacements.
-  $admin_link = l($t('Solution Pack admin'), 'admin/islandora/solution_pack_config');
+  $admin_link = l($t('Solution Pack admin'), 'admin/islandora/solution_packs');
   $config_link = l($t('Islandora configuration'), 'admin/islandora/configure');
   $t_params = array(
     '@module' => $module,

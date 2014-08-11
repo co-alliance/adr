@@ -28,13 +28,13 @@ If you want to support languages other than English download and enable [String 
 
 ## Installation
 
-Before installing Islandora the XACML policies located [here](https://github.com/Islandora/islandora-xacml-policies) should be copied into the Fedora global XACML policies folder. This will allow "authenticated users" in Drupal to access Fedora API-M functions. It is to be noted that the `permit-upload-to-anonymous-user.xml` and `permit-apim-to-anonymous-user.xml` files do not need to be present unless requirements for anonymous ingesting are present.
+Before installing Islandora the XACML policies located in the policies folder should be copied into the Fedora global XACML policies folder. This will allow "authenticated users" in Drupal to access Fedora API-M functions. It is to be noted that the `permit-upload-to-anonymous-user.xml` and `permit-apim-to-anonymous-user.xml` files do not need to be present unless requirements for anonymous ingesting are present.
 
 You will also have to remove some default policies if you want full functionality as well.
 
 Remove deny-purge-datastream-if-active-or-inactive.xml to allow for purging of datastream versions.
 
-More detailed information can be found in the 'Set XACML Policies' in the [Installing Fedora](https://wiki.duraspace.org/display/ISLANDORA713/Installing+Fedora) chapter of the documentation.
+More detailed information can be found in the 'Set XACML Policies' in the [Installing Fedora](https://wiki.duraspace.org/display/ISLANDORA712/Installing+Fedora) chapter of the documentation.
 
 ## Configuration
 
@@ -62,7 +62,6 @@ Current maintainers:
 ## Development
 
 If you would like to contribute to this module, please check out our helpful [Documentation for Developers](https://github.com/Islandora/islandora/wiki#wiki-documentation-for-developers) info, as well as our [Developers](http://islandora.ca/developers) section on the Islandora.ca site.
-The tests for this module will not run through Drupal’s UI. They will work using Drush, which works around Drupal’s batch API.
 
 ## License
 

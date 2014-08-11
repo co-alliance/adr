@@ -142,17 +142,15 @@ function islandora_regenerate_datastream_derivative_batch(AbstractDatastream $da
  *   The pid of the object we are performing.
  * @param bool $force
  *   Whether we are forcing derivative regeneration or not.
- * @param array $hook
- *   The derivative definition.
  * @param array $context
  *   The context of the current batch operation.
  */
-function islandora_derivative_perform_batch_operation($function, $file, $pid, $force, $hook, &$context) {
+function islandora_derivative_perform_batch_operation($function, $file, $pid, $force, &$context) {
   if ($file) {
     require_once $file;
   }
   if (function_exists($function)) {
-    $logging = call_user_func($function, islandora_object_load($pid), $force, $hook);
+    $logging = call_user_func($function, islandora_object_load($pid), $force);
     if (!empty($logging)) {
       $context['results']['logging'][] = $logging;
     }
