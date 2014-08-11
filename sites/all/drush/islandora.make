@@ -86,11 +86,11 @@ projects[islandora_jwplayer][download][type] = git
 projects[islandora_jwplayer][download][url] = https://github.com/Islandora/islandora_jwplayer.git
 projects[islandora_jwplayer][download][tag] = 7.x-1.3
 
-projects[islandora_mapping][type] = module
-projects[islandora_mapping][download][type] = git
-projects[islandora_mapping][download][url] = https://github.com/discoverygarden/islandora_mapping.git
+;projects[islandora_mapping][type] = module
+;projects[islandora_mapping][download][type] = git
+;projects[islandora_mapping][download][url] = https://github.com/discoverygarden/islandora_mapping.git
 ; no release-specific version available
-projects[islandora_mapping][download][revision] = 647f2b498273b4e4f8fa36e01fb04e69faa8d39a
+;projects[islandora_mapping][download][revision] = 647f2b498273b4e4f8fa36e01fb04e69faa8d39a
 
 projects[islandora_marcxml][type] = module
 projects[islandora_marcxml][download][type] = git
