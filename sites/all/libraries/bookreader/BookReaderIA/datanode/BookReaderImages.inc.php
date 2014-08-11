@@ -52,7 +52,7 @@ class BookReaderImages
         'large' => 2048,
     );
 
-    // Keys in the image permalink urls, e.g. http://archive.org/download/itemid/page/cover_{keyval}_{keyval}.jpg
+    // Keys in the image permalink urls, e.g. http://www.archive.org/download/itemid/page/cover_{keyval}_{keyval}.jpg
     public static $imageUrlKeys = array(
         //'r' => 'reduce', // pow of 2 reduction
         's' => 'scale', // $$$ scale is downscaling factor in BookReaderImages but most people call this "reduce"
@@ -97,8 +97,14 @@ class BookReaderImages
         // Index of image to return
         $imageIndex = null;
 
-        $bookId = $_REQUEST['id'];
-
+        // deal with subPrefix
+        if (array_key_exists($_REQUEST, 'subPrefix') && $_REQUEST['subPrefix']) {
+            $parts = explode('/', $_REQUEST['subPrefix']);
+            $bookId = $parts[count($parts) - 1 ];
+        } else {
+            $bookId = $_REQUEST['id'];
+        }
+        
         $pageInfo = $this->parsePageRequest($page, $bookId);
 
         $basePage = $pageInfo['type'];
@@ -273,7 +279,7 @@ class BookReaderImages
         
         // Rotate is currently only supported for jp2 since it does not add server load
         $allowedRotations = array("0", "90", "180", "270");
-        $rotate = (isset($requestEnv['rotate']) ? $requestEnv['rotate'] : '0');
+        $rotate = $requestEnv['rotate'];
         if ( !in_array($rotate, $allowedRotations) ) {
             $rotate = "0";
         }
@@ -668,7 +674,7 @@ class BookReaderImages
                     $decompressCmd .= ' | (bmptopnm 2>/dev/null)';
                 }
                 break;        
-
+/*
             case 'tiff':
                 // We need to create a temporary file for tifftopnm since it cannot
                 // work on a pipe (the file must be seekable).
@@ -681,7 +687,7 @@ class BookReaderImages
                 $decompressCmd = 
                     ' > ' . $tempFile . ' ; tifftopnm ' . $tempFile . ' 2>/dev/null' . $this->reduceCommand($scale);
                 break;
-/*         
+         
             case 'jpeg':
                 $decompressCmd = ' | ( jpegtopnm 2>/dev/null ) ' . $this->reduceCommand($scale);
                 break;
@@ -692,9 +698,7 @@ class BookReaderImages
 */
 
             // Formats handled by ImageMagick
-            // (TIFF switched back to tifftopnm, above, because IM struggled with large TIFFs, as in
-            // item 3928153.0001.001.umich.edu)
-            // case 'tiff':
+            case 'tiff':
             case 'jpeg':
             case 'png':
                 $region = $this->getRegionDimensions($srcInfo, $region);

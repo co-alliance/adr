@@ -28,11 +28,6 @@ if (isset($_REQUEST['olHost'])) {
     $olHost = $_REQUEST['olHost'];
 }
 
-$olAuthUrl = "https://archive.org/bookreader/BookReaderAuthProxy.php?id=XXX";
-if (isset($_REQUEST['olAuthUrl'])) {
-    $olAuthUrl = $_REQUEST['olAuthUrl'];
-}
-
 if (!preg_match('/^\d{10}-[0-9a-f]{32}$/', $token)) {
     fatal();
 }
@@ -53,7 +48,6 @@ if (!preg_match("|^/stream/$id|", $bookPath)) {
 setcookie('br-loan-' . $id, $uuid, 0, '/', '.archive.org');
 setcookie('loan-' . $id, $token, 0, '/', '.archive.org');
 setcookie('ol-host', $olHost, 0, '/', '.archive.org');
-setcookie('ol-auth-url', $olAuthUrl, 0, '/', '.archive.org');
 
 header('Location: ' . $bookPath);
 

@@ -54,8 +54,8 @@ function islandora_internet_archive_bookreader_preprocess_islandora_internet_arc
       'mobilize' => variable_get('islandora_internet_archive_bookreader_mobile_full_screen', FALSE),
     ),
   );
+
   drupal_add_js($data_array, 'setting');
-  drupal_add_js("$module_path/js/detectmobilebrowser.js");
   drupal_add_css("$library_path/BookReader/BookReader.css", array(
     'group' => CSS_SYSTEM,
   ));
@@ -65,6 +65,26 @@ function islandora_internet_archive_bookreader_preprocess_islandora_internet_arc
   drupal_add_library('system', 'effects');
   drupal_add_library('system', 'ui.slider');
   drupal_add_library('system', 'ui.draggable');
+
+  // XXX: Extra slash is NOT an error or a mistake. We need to add this JS
+  // both before and after our custom jQuery gets setup, as we need it in both
+  // instances of jQuery.
+  drupal_add_js("$library_path/BookReader//jquery.bt.min.js", array(
+    'group' => JS_LIBRARY,
+  ));
+  drupal_add_js("$module_path/js/detectmobilebrowser.js",
+    array(
+      'group' => JS_LIBRARY,
+    )
+  );
+  // Add the required jQuery version, specifying weight.
+  drupal_add_js("$module_path/js/jquery_1_5.min.js", array(
+    'group' => JS_LIBRARY,
+  ));
+  // We also need to be sure to use the correct jquery ui version.
+  drupal_add_js("$module_path/js/jquery.ui-1.8.10/jquery-ui.min.js", array(
+    'group' => JS_LIBRARY,
+  ));
   drupal_add_js("$library_path/BookReader/dragscrollable.js", array(
     'group' => JS_LIBRARY,
   ));
@@ -79,10 +99,23 @@ function islandora_internet_archive_bookreader_preprocess_islandora_internet_arc
   drupal_add_js("$library_path/BookReader/BookReader.js", array(
     'group' => JS_LIBRARY,
   ));
-  drupal_add_js("$module_path/js/islandora_book_reader.js");
-  drupal_add_js("$module_path/js/islandora_internet_archive_bookreader.js");
+  drupal_add_js("$module_path/js/islandora_book_reader.js",
+    array(
+      'group' => JS_LIBRARY,
+    )
+  );
+  drupal_add_js("$module_path/js/islandora_internet_archive_bookreader.js", array(
+    'group' => JS_LIBRARY,
+  ));
+  // The Internet Archive Book Reader, hijacks the URL anchor '#' for jumping to
+  // particular page # / view modes. Drupal fieldset javascript code
+  // (collapse.js) expects the URL anchor '#' to be a valid HTML ID, and fails
+  // to execute when it is not a valid HTML ID. To get around this we use our
+  // own version of (collapse.js) that ignores this situation.
+  drupal_add_js("$module_path/js/collapse.js", array(
+    'group' => JS_THEME,
+  ));
 }
-
 
 /**
  * Implements theme_hook().
@@ -141,7 +174,7 @@ function islandora_internet_archive_bookreader_info_fields(AbstractObject $objec
     'Abstract' => '//mods:abstract',
     'Identifier' => '//mods:identifier',
     'Physical Description' => array('//mods:physicalDescription', 'mods:extent | mods:form | mods:note[not(@*)] | mods:note[@type="physical"] | mods:note[@type="details"] | mods:scale | mods:coordinates'),
-    'Topic' => '//mods:mods[1]/mods:subject/mods:topic',
+    'Topic' => '/mods:mods/mods:subject/mods:topic',
     'Continent' => '//mods:continent',
     'Country' => '//mods:country',
     'Province' => '//mods:province',
