@@ -142,5 +142,6 @@ function accordion_rotator_canvas_setup() {
     $content += array_fill($content_count, 4 - $content_count, $default_value);
   }
   $results["content"] = $content;
-  return drupal_json_output($results);
+  $json = json_encode($results);
+  echo $json;
 }
