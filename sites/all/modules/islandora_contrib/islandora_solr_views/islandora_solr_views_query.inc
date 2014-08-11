@@ -97,14 +97,28 @@ class islandora_solr_views_query extends views_plugin_query {
 
       // Add filters to parameters.
       if (isset($this->params['filters'])) {
-        $params['f'] = $this->params['filters'];
+        // Need to see what filter group operations we may have present.
+        $group_ops = $this->where;
+        $constructed_group_params = array();
+        foreach ($this->params['filters'] as $group => $filter) {
+          // Filters that need to be grouped will come in as arrays.
+          if (is_array($filter)) {
+            $group_string = implode(" {$group_ops[$group]['type']} ", $filter);
+            $constructed_group_params[$group] = format_string("(!group_string)", array('!group_string' => $group_string));
+          }
+          else {
+            $params['f'][] = $filter;
+          }
+        }
+        $params['f'][] = implode(" {$this->group_operator} ", $constructed_group_params);
       }
 
       // Add sorting.
       if (isset($this->params['sort'])) {
+        module_load_include('inc', 'islandora_solr', 'includes/utilities');
         // Populate sorting parameters.
         foreach ($this->params['sort'] as $field => $order) {
-          $params['sort'][] = $field . ' ' . $order;
+          $params['sort'][] = islandora_solr_lesser_escape($field) . ' ' . $order;
         }
       }
 
@@ -139,7 +153,7 @@ class islandora_solr_views_query extends views_plugin_query {
       $islandora_solr_query->solrLimit = $this->pager->options['items_per_page'];
       // Add solr start.
       $islandora_solr_query->solrStart = $this->offset;
-      
+
       // Excecute query.
       $islandora_solr_query->executeQuery(FALSE);
       // Solr results.
@@ -182,9 +196,16 @@ class islandora_solr_views_query extends views_plugin_query {
   /**
    * Function add_filter.
    */
-  public function add_filter($type, $value, $exclude = FALSE) {
+  public function add_filter($type, $value, $group, $exclude = FALSE) {
+    module_load_include('inc', 'islandora_solr', 'includes/utilities');
     $exclude_string = ($exclude) ? '-' : '';
-    $this->params['filters'][] = $exclude_string . $type . ':' . $value;
+    if ($group) {
+      $this->params['filters'][$group][] = $exclude_string . islandora_solr_lesser_escape($type) . ':' . $value;
+    }
+    else {
+      $this->params['filters'][] = $exclude_string . islandora_solr_lesser_escape($type) . ':' . $value;
+
+    }
   }
 
   /**
