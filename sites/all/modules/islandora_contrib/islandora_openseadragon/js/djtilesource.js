@@ -28,7 +28,7 @@
       if (data.match(/\"imagefile\"\: \"[^\"]*?(\\).*\"/g)) {
         // Since Djatoka isn't returning a true JSON object (http://bit.ly/1id6dBo),
         // backslashes in the JP2 file path (Windows) are getting mistaken for escaped
-        // characters. Escape the backslashes themselves so that viewer doesn't break.
+        // characters. Escape the backslashes themselves so the viewer doesn't break.
         data = data.replace(/(\"imagefile\"\: \")(.*?)(\")/g, function (match, capture1, imagepath, capture3) {
           return capture1 + imagepath.replace(/\\/g, '\\\\') + capture3
         });
@@ -48,7 +48,7 @@
       that.getTileUrl = $.DjatokaTileSource.prototype.getTileUrl;
     };
     jQuery.ajaxSetup({async: false});
-    jQuery.get(this.baseURL, djatoka_get_params, djatoka_get_success, 'string');
+    jQuery.get(this.baseURL, djatoka_get_params, djatoka_get_success, 'text');
     jQuery.ajaxSetup({async:true});
   };
   jQuery.extend($.DjatokaTileSource.prototype, $.TileSource.prototype); // Inherit from TileSource.
