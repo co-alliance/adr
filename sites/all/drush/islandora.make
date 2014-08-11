@@ -56,8 +56,8 @@ projects[islandora_fits][download][tag] = 7.x-1.3
 projects[islandora_ga_reports][type] = module
 projects[islandora_ga_reports][download][type] = git
 projects[islandora_ga_reports][download][url] = https://github.com/discoverygarden/islandora_ga_reports.git
-; latest release is 7.x-1.1
-projects[islandora_ga_reports][download][tag] = 7.x-1.1
+; no 7.x-1.3 release tagged
+projects[islandora_ga_reports][download][revision] = e4f9ca5d7ad31ee2438bd73fee3911f86eb7dba6
 
 projects[islandora_importer][type] = module
 projects[islandora_importer][download][type] = git
