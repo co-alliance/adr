@@ -140,11 +140,12 @@ projects[islandora_solr_search][download][type] = git
 projects[islandora_solr_search][download][url] = https://github.com/Islandora/islandora_solr_search.git
 projects[islandora_solr_search][download][tag] = 7.x-1.3
 
-projects[islandora_solr_views][type] = module
-projects[islandora_solr_views][download][type] = git
-projects[islandora_solr_views][download][url] = https://github.com/Islandora/islandora_solr_views.git
-; no 7.x-1.3 release tagged
-projects[islandora_solr_views][download][revision] = 2f9bf077d25c10551b2eab1b72e752d4eaac9312
+; This module does not respect the latest changes in how security is handled,
+; so users may get search results that they are not authorized to see.
+;projects[islandora_solr_views][type] = module
+;projects[islandora_solr_views][download][type] = git
+;projects[islandora_solr_views][download][url] = https://github.com/Islandora/islandora_solr_views.git
+;projects[islandora_solr_views][download][revision] = 2f9bf077d25c10551b2eab1b72e752d4eaac9312
 
 projects[islandora_solution_pack_audio][type] = module
 projects[islandora_solution_pack_audio][download][type] = git
