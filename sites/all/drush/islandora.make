@@ -69,11 +69,13 @@ projects[islandora_internet_archive_bookreader][download][type] = git
 projects[islandora_internet_archive_bookreader][download][url] = https://github.com/Islandora/islandora_internet_archive_bookreader.git
 projects[islandora_internet_archive_bookreader][download][tag] = 7.x-1.3
 
-projects[islandora_ip_embargo][type] = module
-projects[islandora_ip_embargo][download][type] = git
-projects[islandora_ip_embargo][download][url] = https://github.com/Islandora/islandora_ip_embargo.git
-; no 7.x-1.3 release tagged
-projects[islandora_ip_embargo][download][revision] = 89796cf522bd690becba1f94c59b3af842513a89
+; This tool from Islandora 7.x-1.2 allowed site admins to limit object access
+; by IP range. It has been removed from the 7.x-1.3 release due to known issue
+; conflicts with how other modules use hooks.
+;projects[islandora_ip_embargo][type] = module
+;projects[islandora_ip_embargo][download][type] = git
+;projects[islandora_ip_embargo][download][url] = https://github.com/Islandora/islandora_ip_embargo.git
+;projects[islandora_ip_embargo][download][revision] = 89796cf522bd690becba1f94c59b3af842513a89
 
 projects[islandora_jodconverter][type] = module
 projects[islandora_jodconverter][download][type] = git
