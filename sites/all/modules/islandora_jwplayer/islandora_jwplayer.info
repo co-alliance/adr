@@ -1,6 +1,0 @@
-name = Islandora JW Player
-description = "A plugin allowing the JW Player to play Islandora content"
-dependencies[] = libraries
-core = 7.x
-version = 7.x-dev
-package = Islandora

@@ -181,7 +181,7 @@ class BookReaderMeta {
                 $response['titleIndex'] = intval($titleIndex);
             }
         }
-        $response['url'] = "http://archive.org/details/$id";
+        $response['url'] = "http://www.archive.org/details/$id";
         $response['pageWidths'] = $pageWidths;
         $response['pageHeights'] = $pageHeights;
         $response['pageNums'] = $pageNums;
@@ -393,7 +393,7 @@ class BookReaderMeta {
             'page' => $page,
         );
         
-        return 'https://' . $metadata['server'] . '/BookReader/BookReaderPreview.php?' . http_build_query($query, '', '&');
+        return 'http://' . $metadata['server'] . '/BookReader/BookReaderPreview.php?' . http_build_query($query, '', '&');
     }
     
     function imageFilePath($leafNum, $subPrefix, $format) {
