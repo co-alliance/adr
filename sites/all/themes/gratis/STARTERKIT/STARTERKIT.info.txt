@@ -11,7 +11,7 @@ base theme = gratis
 ; The actual name you give the file should match what's below.
 ; You'll then need to ucomment by removing the semi-colon.
 
-stylesheets[all][] = css/uwd7custom.css
+;stylesheets[all][] = css/STARTERKIT.css
 
 ; Regions --------------------
 regions[top_links]       = Top Links

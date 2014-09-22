@@ -30,6 +30,8 @@ regions[postscript_first]   = Postscript first
 regions[postscript_second]  = Postscript second
 regions[postscript_third]   = Postscript third
 regions[footer_first]   = Footer first
+regions[footer_second]   = Footer second
+regions[footer_third]   = Footer third
 regions[top_panel]  = Top Panel (special use)
 
 ; Features --------------------
@@ -49,9 +51,9 @@ settings[theme_color_palette]  = orange
 settings[gratis_localcss]  = 0
 settings[gratis_custom_css_location]  = 0
 
-; Information added by Drupal.org packaging script on 2014-01-11
-version = "7.x-1.4"
+; Information added by Drupal.org packaging script on 2014-08-30
+version = "7.x-1.5"
 core = "7.x"
 project = "gratis"
-datestamp = "1389413045"
+datestamp = "1409363930"
 

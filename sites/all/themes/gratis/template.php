@@ -49,7 +49,7 @@ EOL;
   drupal_add_css('//fonts.googleapis.com/css?family=Open+Sans:400italic,600italic,700italic,400,600,700',array('type' => 'external'));
 
   // Add font awesome cdn.
-  drupal_add_css('//maxcdn.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css',array('type' => 'external'));
+  drupal_add_css('//netdna.bootstrapcdn.com/font-awesome/3.2.1/css/font-awesome.min.css',array('type' => 'external'));
 
   // Add a body class is the site name is hidden or not.
   if (theme_get_setting('toggle_name') == FALSE) {
@@ -323,6 +323,23 @@ function gratis_preprocess_page(&$vars, $hook) {
   }
   else {
     $vars['pre_columns'] =  'grid-100 preface';
+  }
+
+  // Footer columns ('$footer').
+  if (!empty($vars['page']['footer_first']) && !empty($vars['page']['footer_second']) && !empty($vars['page']['footer_third'])) {
+    $vars['footer_columns'] =  'grid-33 footer';
+  }
+  elseif (!empty($vars['page']['footer_first']) && !empty($vars['page']['footer_second'])) {
+    $vars['footer_columns'] = 'grid-50 footer';
+  }
+  elseif (!empty($vars['page']['footer_first']) && !empty($vars['page']['footer_third'])) {
+    $vars['footer_columns'] = 'grid-50 footer';
+  }
+  elseif (!empty($vars['page']['footer_second']) && !empty($vars['page']['footer_third'])) {
+    $vars['footer_columns'] = 'grid-50 footer';
+  }
+  else {
+    $vars['footer_columns'] =  'grid-100 footer';
   }
 
   // Primary nav.
