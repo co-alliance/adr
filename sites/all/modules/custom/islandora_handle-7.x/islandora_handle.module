@@ -1,0 +1,148 @@
+<?php
+/**
+ * @file
+ * Module used to house customizations for MIRC@SC.
+ */
+
+/**
+ * Implements hook_menu().
+ */
+function islandora_handle_menu() {
+  $items = array();
+  $items['admin/islandora/islandora-handle'] = array(
+    'title' => 'Islandora Handle',
+    'description' => 'Settings for the Islandora Handle module.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('islandora_handle_server_form'),
+    'access arguments' => array('administer islandora handle'),
+    'file' => 'includes/admin.inc',
+  );
+  $items['admin/islandora/islandora-handle/server'] = array(
+    'title' => 'Handle Server',
+    'description' => 'Settings for the Handle.net server we are interacting with.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('islandora_handle_server_form'),
+    'access arguments' => array('administer islandora handle'),
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'file' => 'includes/admin.inc',
+    'weight' => 0,
+  );
+  $items['admin/islandora/islandora-handle/content-models'] = array(
+    'title' => 'Content Models',
+    'description' => 'Specific content model configuration for interaction with Handles.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('islandora_handle_cmodel_form'),
+    'access arguments' => array('administer islandora handle'),
+    'type' => MENU_LOCAL_TASK,
+    'file' => 'includes/admin.inc',
+    'weight' => 1,
+  );
+  return $items;
+}
+
+/**
+ * Implements hook_permission().
+ */
+function islandora_handle_permission() {
+  return array(
+    'administer islandora handle' => array(
+      'title' => 'Administer the Islandora Handle module',
+    ),
+  );
+}
+
+/**
+ * Implements hook_object_alter().
+ */
+function islandora_handle_islandora_object_alter(AbstractObject $object, array &$context) {
+  module_load_include('inc', 'islandora_handle', 'includes/handle');
+  if ($context['action'] == 'ingest') {
+    $models = $object->models;
+    $handle_results = db_select('islandora_handle_apply_handle', 'h')
+    ->fields('h', array('cmodel', 'datastream', 'xsl_location'))
+    ->condition('cmodel', $models)
+    ->execute()
+    ->fetchAll();
+
+    if (count($handle_results) > 0) {
+      $response = islandora_handle_construct_handle($object);
+      if ($response->code == 201) {
+        $append_count = 0;
+        foreach ($handle_results as $assoc) {
+          if (isset($object[$assoc->datastream])) {
+            islandora_handle_append_handle($object, $assoc->datastream, $assoc->xsl_location);
+            $append_count++;
+          }
+        }
+        // Edge case that could occur if for some reason the datastream(s)
+        // are not present on the object when we go to append. No use having a
+        // Handle present when it's not appended anywhere...
+        if ($append_count == 0) {
+          $delete_response = islandora_handle_delete_handle($object->id);
+          if (!in_array($delete_response->code, array('204', '500'))) {
+            $error = $delete_response->error;
+            watchdog('islandora_handle', "Unable to delete Handle. Error: @error", array('@error' => $error), WATCHDOG_ERROR);
+          }
+          watchdog('islandora_handle', "No Handle value was appended for @obj as the associated datastreams do not exist", array('@obj' => $object->id), WATCHDOG_ERROR);
+        }
+        // Add the Handle value to the DC.
+        else {
+          islandora_handle_add_to_dc_datastream($object);
+        }
+      }
+      else {
+        $error = $response->error;
+        watchdog('islandora_handle', "Error constructing Handle for @obj! Error of: @error", array('@error' => $error, '@obj' => $object->id), WATCHDOG_ERROR);
+      }
+    }
+  }
+  elseif ($context['action'] == 'purge') {
+    // Query cmodels and delete Handles that may be there.
+    $models = $object->models;
+    $handle_results = db_select('islandora_handle_apply_handle', 'h')
+    ->fields('h', array('cmodel', 'datastream', 'xsl_location'))
+    ->condition('cmodel', $models)
+    ->execute()
+    ->fetchAll();
+
+    if (count($handle_results > 0)) {
+      // Go out and attempt to delete the Handle if there is one
+      // supposed to be created.
+      $response = islandora_handle_delete_handle($object->id);
+      if (!in_array($response->code, array('204', '500'))) {
+        $error = $response->error;
+        watchdog('islandora_handle', "Unable to delete Handle. Error: @error", array('@error' => $error), WATCHDOG_ERROR);
+      }
+    }
+  }
+}
+
+/**
+ * Hook that retrieves the default XSL files that ship with the module.
+ *
+ * @return array
+ *   An array containing the list of XSL/XSLT files available.
+ */
+function islandora_handle_islandora_handle_get_xsl_files() {
+  $files = file_scan_directory(drupal_get_path('module', 'islandora_handle') . '/transforms/', '/.*\.xslt?$/');
+
+  $transform_options = array();
+  foreach ($files as $file) {
+    $transform_options[$file->uri] = $file->filename;
+  }
+
+  $handle_uploaded_files = array();
+  $upload_path = 'public://islandora_handle_xsls';
+  $uploaded_files = file_scan_directory($upload_path, '/.*\.xslt?$/');
+
+  foreach ($uploaded_files as $up_file) {
+    $handle_uploaded_files[$up_file->uri] = $up_file->filename;
+  }
+
+  foreach ($handle_uploaded_files as $key => $file) {
+    if (!in_array($file, $transform_options)) {
+      $transform_options[$key] = $file;
+    }
+  }
+  return $transform_options;
+}
