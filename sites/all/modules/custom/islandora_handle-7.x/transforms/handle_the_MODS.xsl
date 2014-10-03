@@ -16,9 +16,7 @@
     <xsl:template match="mods:mods">
         <xsl:copy>
             <xsl:apply-templates/>
-            <identifier type="hdl">
-                <xsl:value-of select="$handle_value"/>
-            </identifier>
+            <url usage="primary display"><xsl:value-of select="$handle_value"/></url>
         </xsl:copy>
     </xsl:template>
     
