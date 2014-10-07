@@ -52,7 +52,7 @@ function accordion_rotator_canvas_setup() {
   module_load_include('inc', 'islandora', 'includes/datastream');
   // Get the configuration pids from this modules configuration page.
   $content = array();
-  $pids_array = explode(",", variable_get('accordion_pid_list'));
+  $pids_array = array_filter(array_map('trim', explode(',', variable_get('accordion_pid_list'))));
 
 
   $fedora_object2 = islandora_object_load("islandora:sp_basic_image_collection");
@@ -81,27 +81,26 @@ function accordion_rotator_canvas_setup() {
           $dc_object = DublinCore::importFromXMLString($dc);
         }
 
+        $datastreams = array(
+          'JPEG',
+          //Large Image SP
+          'JPG',
+          //Basic Image SP
+          'MEDIUM_SIZE',
+          //PDF SP
+          'PREVIEW',
+          //General objects
+          'TN',
+        );
         $thumbnail_url = '';
-        // Try to set the best quality image as the url.
-        // If JPEG is available, use it instead.
-        if (empty($thumbnail_url) && isset($fedora_object['JPEG'])) {
-          $thumbnail_url = url("islandora/object/{$fedora_object->id}/datastream/JPEG/view", array(
-            'absolute' => TRUE,
-            'language' => NULL,
-          ));
-        }
-        // If MEDIUM_SIZE is available, use it instead.
-        if (empty($thumbnail_url) && isset($fedora_object['MEDIUM_SIZE'])) {
-          $thumbnail_url = url("islandora/object/{$fedora_object->id}/datastream/MEDIUM_SIZE/view", array(
-            'absolute' => TRUE,
-            'language' => NULL,
-          ));
-        }
-        if (empty($thumbnail_url) && isset($fedora_object['TN'])) {
-          $thumbnail_url = url("islandora/object/{$fedora_object->id}/datastream/TN/view", array(
-            'absolute' => TRUE,
-            'language' => NULL,
-          ));
+        foreach ($datastreams as $datastream) {
+          if (isset($fedora_object[$datastream]) && islandora_datastream_access(ISLANDORA_VIEW_OBJECTS, $fedora_object[$datastream])) {
+            $thumbnail_url = url("islandora/object/{$fedora_object->id}/datastream/{$datastream}/view", array(
+              'absolute' => TRUE,
+              'language' => NULL,
+            ));
+            break;
+          }
         }
 
         // Add this data as an entry to be displayed to the user as
@@ -142,6 +141,5 @@ function accordion_rotator_canvas_setup() {
     $content += array_fill($content_count, 4 - $content_count, $default_value);
   }
   $results["content"] = $content;
-  $json = json_encode($results);
-  echo $json;
+  return drupal_json_output($results);
 }
