@@ -238,3 +238,19 @@ function ir7_form_islandora_solr_simple_search_form_alter(&$form, &$form_state, 
 function ir7_block_view_islandora_solr_simple_alter(&$data, $block) {
   drupal_add_js(drupal_get_path('theme', 'ir7') . '/js/clean_simple_search.js');
 }
+
+/**
+ * Implements hook_preprocess_theme().
+ */
+function ir7_preprocess_islandora_book_book(array &$variables) {
+  drupal_add_js('misc/form.js');
+  drupal_add_js('misc/collapse.js');
+  $islandora_object = $variables['object'];
+  $repository = $islandora_object->repository;
+  module_load_include('inc', 'islandora', 'includes/utilities');
+  module_load_include('inc', 'islandora', 'includes/metadata');
+
+  $variables['parent_collections'] = islandora_get_parents_from_rels_ext($islandora_object);
+  $variables['metadata'] = islandora_retrieve_metadata_markup($islandora_object);
+  $variables['description'] = islandora_retrieve_description_markup($islandora_object);
+}
