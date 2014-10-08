@@ -9,7 +9,7 @@
     <?php print $viewer; ?>
   </div>
 <?php endif; ?>
-
+<a class="dwn_btn" href="<?php print url("islandora/object/{$object}/datastream/PDF/download"); ?>">Download</a>
 <div class="islandora-book-metadata">
   <?php print $description; ?>
   <?php if ($parent_collections): ?>
