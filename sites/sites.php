@@ -1,0 +1,1 @@
+/var/www/coalliance/shared/coalliance/sites/sites.php
