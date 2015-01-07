@@ -58,11 +58,10 @@ function islandora_remote_object_copy_copy_form_submit($form, &$form_state) {
   module_load_include('inc', 'islandora', 'includes/tuque');
   module_load_include('inc', 'islandora', 'includes/tuque_wrapper');
 
+  $values = $form_state['values'];
   variable_set('islandora_remote_object_copy_uri', $values['fedora_url']);
   variable_set('islandora_remote_object_copy_username', $values['fedora_username']);
   variable_set('islandora_remote_object_copy_password', $values['fedora_password']);
-
-  $values = $form_state['values'];
   $url = $values['fedora_url'];
   $fedora_account = new stdClass();
   $fedora_account->user = $values['fedora_username'];
