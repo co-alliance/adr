@@ -20,29 +20,36 @@ function islandora_remote_object_copy_menu() {
 function islandora_remote_object_copy_copy_form($form, &$form_state) {
   $form['fedora_url'] = array(
     '#type' => 'textfield',
-    '#title' => 'Fedora URL',
+    '#title' => t('Fedora URL'),
     '#required' => TRUE,
     '#default_value' => variable_get('islandora_remote_object_copy_uri', ''),
   );
 
   $form['fedora_username'] = array(
     '#type' => 'textfield',
-    '#title' => 'Fedora Username',
+    '#title' => t('Fedora Username'),
     '#required' => TRUE,
     '#default_value' => variable_get('islandora_remote_object_copy_username', ''),
   );
 
   $form['fedora_password'] = array(
     '#type' => 'textfield',
-    '#title' => 'Fedora Password',
+    '#title' => t('Fedora Password'),
     '#required' => TRUE,
     '#default_value' => variable_get('islandora_remote_object_copy_password', ''),
   );
 
   $form['fedora_pid'] = array(
     '#type' => 'textfield',
-    '#title' => 'Fedora Pid',
-    '#description' => 'The Fedora Pid to look for and copy over.',
+    '#title' => t('Fedora Pid'),
+    '#description' => t('The Fedora Pid to look for and copy over.'),
+    '#required' => TRUE,
+  );
+
+  $form['parent_collection'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Parent Collection'),
+    '#description' => t('Parent collection to attach object to.'),
     '#required' => TRUE,
   );
 
@@ -62,22 +69,82 @@ function islandora_remote_object_copy_copy_form_submit($form, &$form_state) {
   variable_set('islandora_remote_object_copy_uri', $values['fedora_url']);
   variable_set('islandora_remote_object_copy_username', $values['fedora_username']);
   variable_set('islandora_remote_object_copy_password', $values['fedora_password']);
+  variable_set('islandora_remote_object_copy_parent_collection', $values['parent_collection']);
+
   $url = $values['fedora_url'];
   $fedora_account = new stdClass();
   $fedora_account->user = $values['fedora_username'];
   $fedora_account->pass = $values['fedora_password'];
+  $parent_collection = $values['parent_collection'];
 
   $connection = new RepositoryConnection($url, $fedora_account->user, $fedora_account->pass);
   $api = new FedoraApi($connection);
   $repository = new FedoraRepository($api, new SimpleCache());
   $fedora_object = $repository->getObject($values['fedora_pid']);
-  dpm($fedora_object->id, 'ID');
-  dpm($fedora_object->models, 'MODELS');
-  dpm($fedora_object->state, 'STATE');
-  dpm('DATASTREAMS:');
+  $compound = TRUE;
   foreach ($fedora_object as $datastream) {
+    dpm('DATASTREAM:');
     dpm($datastream->id);
     dpm($datastream->label);
     dpm($datastream->mimetype);
   }
+  if ($compound) {
+    $islandora_object = islandora_remote_object_copy_create_compound_object($fedora_object, $parent_collection);
+    drupal_set_message(t('Created Islandora Object @islandora_object', array('@islandora_object' => $islandora_object->id)));
+    if (!empty($islandora_object)) {
+      foreach ($fedora_object as $datastream) {
+        islandora_remote_object_copy_create_compound_object_item($datastream, $islandora_object, $fedora_object, $parent_collection);
+      }
+    }
+  }
+}
+
+function islandora_remote_object_copy_create_compound_object($fedora_object, $parent_collection) {
+  $tuque = islandora_get_tuque_connection();
+  $islandora_object = islandora_object_load($fedora_object->id);
+  $object_properties = array(
+    'state',
+    'createdDate',
+    'lastModifiedDate',
+    'label',
+    'owner',
+    'logMessage',
+  );
+  $content_models = array(
+    'islandora:compound_object',
+    'fedora-system:FedoraObject-3.0',
+  );
+  $datastreams = array(
+    'MODS',
+    'DC'
+  );
+  if (empty($islandora_object)) {
+    $islandora_object = $tuque->repository->constructObject($fedora_object->id);
+    foreach ($object_properties as $property) {
+      if (isset($fedora_object->$property)) {
+        $islandora_object->$property = $fedora_object->$property;
+      }
+    }
+    foreach ($content_models as $content_model) {
+      $islandora_object->relationships->add(FEDORA_MODEL_URI, 'hasModel', $content_model);
+    }
+    $islandora_object->relationships->add(FEDORA_RELS_EXT_URI, 'isMemberOfCollection', $parent_collection);
+    islandora_add_object($islandora_object);
+    foreach ($datastreams as $datastream) {
+      if ($fedora_object[$datastream]) {
+        $fedora_ds = $fedora_object[$datastream];
+        $ds = $islandora_object->constructDatastream('MODS');
+        $ds->label = $fedora_ds->label;
+        $ds->mimetype = $fedora_ds->mimetype;
+        $ds->control_group = 'M';
+        $ds->setContentFromString($fedora_ds->content);
+        $islandora_object->ingestDatastream($ds);
+      }
+    }
+  }
+  return $islandora_object;
+}
+
+function islandora_remote_object_copy_create_compound_object_item($islandora_object, $fedora_object, $datastream) {
+  $connection = islandora_get_tuque_connection();
 }
