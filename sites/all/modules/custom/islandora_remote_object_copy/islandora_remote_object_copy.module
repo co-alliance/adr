@@ -78,30 +78,21 @@ function islandora_remote_object_copy_copy_form_submit($form, &$form_state) {
   $parent_collection = $values['parent_collection'];
 
   $connection = new RepositoryConnection($url, $fedora_account->user, $fedora_account->pass);
+  dpm($connection->url);
   $api = new FedoraApi($connection);
   $repository = new FedoraRepository($api, new SimpleCache());
   $fedora_object = $repository->getObject($values['fedora_pid']);
   $compound = TRUE;
-  foreach ($fedora_object as $datastream) {
-    dpm('DATASTREAM:');
-    dpm($datastream->id);
-    dpm($datastream->label);
-    dpm($datastream->mimetype);
-  }
   if ($compound) {
     $islandora_object = islandora_remote_object_copy_create_compound_object($fedora_object, $parent_collection);
     drupal_set_message(t('Created Islandora Object @islandora_object', array('@islandora_object' => $islandora_object->id)));
-    if (!empty($islandora_object)) {
-      foreach ($fedora_object as $datastream) {
-        islandora_remote_object_copy_create_compound_object_item($datastream, $islandora_object, $fedora_object, $parent_collection);
-      }
-    }
   }
 }
 
 function islandora_remote_object_copy_create_compound_object($fedora_object, $parent_collection) {
   $tuque = islandora_get_tuque_connection();
-  $islandora_object = islandora_object_load($fedora_object->id);
+  dpm($tuque->connection->url);
+  $islandora_object = $tuque->repository->getObject($object_id);
   $object_properties = array(
     'state',
     'createdDate',
@@ -129,7 +120,6 @@ function islandora_remote_object_copy_create_compound_object($fedora_object, $pa
       $islandora_object->relationships->add(FEDORA_MODEL_URI, 'hasModel', $content_model);
     }
     $islandora_object->relationships->add(FEDORA_RELS_EXT_URI, 'isMemberOfCollection', $parent_collection);
-    islandora_add_object($islandora_object);
     foreach ($datastreams as $datastream) {
       if ($fedora_object[$datastream]) {
         $fedora_ds = $fedora_object[$datastream];
@@ -141,6 +131,10 @@ function islandora_remote_object_copy_create_compound_object($fedora_object, $pa
         $islandora_object->ingestDatastream($ds);
       }
     }
+    islandora_add_object($islandora_object);
+  }
+  else {
+    dpm('object exists' . $fedora_object->id);
   }
   return $islandora_object;
 }
