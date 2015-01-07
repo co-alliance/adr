@@ -64,6 +64,7 @@ function islandora_remote_object_copy_copy_form($form, &$form_state) {
 function islandora_remote_object_copy_copy_form_submit($form, &$form_state) {
   module_load_include('inc', 'islandora', 'includes/tuque');
   module_load_include('inc', 'islandora', 'includes/tuque_wrapper');
+  module_load_include('inc', 'islandora_remote_object_copy', 'includes/UncachedFedorayRepository');
 
   $values = $form_state['values'];
   variable_set('islandora_remote_object_copy_uri', $values['fedora_url']);
@@ -79,7 +80,7 @@ function islandora_remote_object_copy_copy_form_submit($form, &$form_state) {
 
   $connection = new RepositoryConnection($url, $fedora_account->user, $fedora_account->pass);
   $api = new FedoraApi($connection);
-  $repository = new FedoraRepository($api, new SimpleCache());
+  $repository = new UncachedFedoraRepository($api, new SimpleCache());
   $fedora_object = $repository->getObject($values['fedora_pid']);
   $compound = TRUE;
   if ($compound) {
@@ -90,7 +91,6 @@ function islandora_remote_object_copy_copy_form_submit($form, &$form_state) {
 
 function islandora_remote_object_copy_create_compound_object($fedora_object, $parent_collection) {
   $tuque = islandora_get_tuque_connection();
-  dpm($tuque->connection->url);
   $islandora_object = $tuque->repository->getObject($fedora_object->id);
   $object_properties = array(
     'state',
@@ -133,7 +133,7 @@ function islandora_remote_object_copy_create_compound_object($fedora_object, $pa
     islandora_add_object($islandora_object);
   }
   else {
-    dpm('object exists' . $fedora_object->id);
+    drupal_set_message('object exists' . $fedora_object->id);
   }
   return $islandora_object;
 }
