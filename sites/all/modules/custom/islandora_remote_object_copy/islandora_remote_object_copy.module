@@ -137,7 +137,7 @@ function islandora_remote_object_copy_create_compound_object($fedora_object, $pa
     foreach ($datastreams as $datastream) {
       if ($fedora_object[$datastream]) {
         $fedora_ds = $fedora_object[$datastream];
-        $ds = $islandora_object->constructDatastream('MODS');
+        $ds = $islandora_object->constructDatastream($datastream);
         $ds->label = $fedora_ds->label;
         $ds->mimetype = $fedora_ds->mimetype;
         $ds->control_group = 'M';
