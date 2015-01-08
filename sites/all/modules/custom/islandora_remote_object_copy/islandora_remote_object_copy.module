@@ -124,7 +124,7 @@ function islandora_remote_object_copy_create_compound_object($fedora_object, $pa
     'logMessage',
   );
   $content_models = array(
-    'islandora:compound_object',
+    'fedora-system:ContentModel-3.0',
     'fedora-system:FedoraObject-3.0',
   );
   $datastreams = array(
@@ -179,7 +179,6 @@ function islandora_remote_object_copy_create_compound_object_item($fedora_object
   if ($mime_type == 'application/pdf') {
     $content_models = array(
       'islandora:sp_pdf',
-      'fedora-system:FedoraObject-3.0',
     );
     $content_datastream = 'OBJ';
   }
