@@ -17,6 +17,9 @@ function islandora_remote_object_copy_menu() {
   return $items;
 }
 
+/**
+ * Primary copy form.
+ */
 function islandora_remote_object_copy_copy_form($form, &$form_state) {
   $form['fedora_url'] = array(
     '#type' => 'textfield',
@@ -82,13 +85,25 @@ function islandora_remote_object_copy_copy_form_submit($form, &$form_state) {
   $api = new FedoraApi($connection);
   $repository = new UncachedFedoraRepository($api, new SimpleCache());
   $fedora_object = $repository->getObject($values['fedora_pid']);
-  $compound = TRUE;
+  $compound = FALSE;
+  if ($fedora_object['RELS-INT']) {
+    $rels_int = $fedora_object['RELS-INT']->content;
+    if (substr_count($rels_int, 'rdf:about') > 1) {
+      $compound = TRUE;
+    }
+  }
   if ($compound) {
     $islandora_object = islandora_remote_object_copy_create_compound_object($fedora_object, $parent_collection);
     drupal_set_message(t('Created Islandora Object @islandora_object', array('@islandora_object' => $islandora_object->id)));
+    foreach ($fedora_object as $datastream) {
+      islandora_remote_object_copy_create_compound_object_item($islandora_object, $fedora_object, $parent_collection);
+    }
   }
 }
 
+/**
+ * Creates compound object.
+ */
 function islandora_remote_object_copy_create_compound_object($fedora_object, $parent_collection) {
   $tuque = islandora_get_tuque_connection();
   $islandora_object = islandora_object_load($fedora_object->id);
