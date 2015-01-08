@@ -33,6 +33,8 @@ function islandora_remote_object_copy_drush_command() {
       ),
     ),
   );
+
+  return $items;
 }
 
 /**
