@@ -95,6 +95,7 @@ function islandora_remote_object_copy_copy_form_submit($form, &$form_state) {
   if ($compound) {
     $islandora_object = islandora_remote_object_copy_create_compound_object($fedora_object, $parent_collection);
     drupal_set_message(t('Created Islandora Object @islandora_object', array('@islandora_object' => $islandora_object->id)));
+    $primary_mime_type = _islandora_remote_object_copy_get_mime_type_from_rels_int($fedora_object);
     foreach ($fedora_object as $datastream) {
       islandora_remote_object_copy_create_compound_object_item($islandora_object, $fedora_object, $parent_collection);
     }
@@ -155,4 +156,13 @@ function islandora_remote_object_copy_create_compound_object($fedora_object, $pa
 
 function islandora_remote_object_copy_create_compound_object_item($islandora_object, $fedora_object, $datastream) {
   $connection = islandora_get_tuque_connection();
+}
+
+function _islandora_remote_object_copy_get_mime_type_from_rels_int($fedora_object) {
+  $mime_type = NULL;
+  if (!empty($fedora_object['RELS-INT'])) {
+    $xml = new SimpleXMLElement($fedora_object['RELS-INT']->content);
+    dpm($xml);
+  }
+  return $mime_type;
 }
