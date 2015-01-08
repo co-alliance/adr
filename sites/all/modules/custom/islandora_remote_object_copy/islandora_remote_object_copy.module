@@ -124,7 +124,7 @@ function islandora_remote_object_copy_create_compound_object($fedora_object, $pa
     'logMessage',
   );
   $content_models = array(
-    'fedora-system:ContentModel-3.0',
+    'islandora:compoundCModel',
     'fedora-system:FedoraObject-3.0',
   );
   $datastreams = array(
