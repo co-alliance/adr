@@ -210,7 +210,7 @@ function islandora_remote_object_copy_create_compound_object_item($fedora_object
     }
     $rels_predicate = variable_get('islandora_compound_object_relationship', 'isConstituentOf');
     $islandora_object->relationships->add(FEDORA_RELS_EXT_URI, 'isMemberOfCollection', $parent_collection);
-    $islandora_object->relationships->add('info:fedora/fedora-system:def/relations-external#', $rels_predicate, array($islandora_object->id));
+    $islandora_object->relationships->add('info:fedora/fedora-system:def/relations-external#', $rels_predicate, $islandora_object->id);
     foreach ($datastreams as $datastream) {
       if ($fedora_object[$datastream]) {
         $fedora_ds = $fedora_object[$datastream];
