@@ -68,6 +68,7 @@ function islandora_remote_object_copy_copy_form_submit($form, &$form_state) {
   module_load_include('inc', 'islandora', 'includes/tuque');
   module_load_include('inc', 'islandora', 'includes/tuque_wrapper');
   module_load_include('inc', 'islandora_remote_object_copy', 'includes/UncachedFedoraRepository');
+  module_load_include('inc', 'islandora_solution_pack_compound', 'includes/manage.form');
 
   $values = $form_state['values'];
   variable_set('islandora_remote_object_copy_uri', $values['fedora_url']);
@@ -95,9 +96,14 @@ function islandora_remote_object_copy_copy_form_submit($form, &$form_state) {
   if ($compound) {
     $islandora_object = islandora_remote_object_copy_create_compound_object($fedora_object, $parent_collection);
     drupal_set_message(t('Created Islandora Object @islandora_object', array('@islandora_object' => $islandora_object->id)));
-    $primary_mime_type = _islandora_remote_object_copy_get_mime_type_from_rels_int($fedora_object);
+    $counter = 1;
+    $context = array();
     foreach ($fedora_object as $datastream) {
-      islandora_remote_object_copy_create_compound_object_item($islandora_object, $fedora_object, $parent_collection);
+      $child_object = islandora_remote_object_copy_create_compound_object_item($datastream, $islandora_object, $fedora_object, $parent_collection);
+      if (!empty($child_object)) {
+        islandora_compound_object_update_sequence($islandora_object->id, $child_object->id, $counter, $context);
+        $counter++;
+      }
     }
   }
 }
@@ -122,7 +128,8 @@ function islandora_remote_object_copy_create_compound_object($fedora_object, $pa
   );
   $datastreams = array(
     'MODS',
-    'DC'
+    'DC',
+    'TN',
   );
   if (empty($islandora_object)) {
     $islandora_object = $tuque->repository->constructObject($fedora_object->id);
@@ -154,15 +161,71 @@ function islandora_remote_object_copy_create_compound_object($fedora_object, $pa
   return $islandora_object;
 }
 
-function islandora_remote_object_copy_create_compound_object_item($islandora_object, $fedora_object, $datastream) {
-  $connection = islandora_get_tuque_connection();
-}
+function islandora_remote_object_copy_create_compound_object_item($datastream, $islandora_object, $fedora_object, $parent_collection) {
+  $tuque = islandora_get_tuque_connection();
+  $fedora_datastream = $fedora_object[$datastream->id];
+  $islandora_object = NULL;
 
-function _islandora_remote_object_copy_get_mime_type_from_rels_int($fedora_object) {
   $mime_type = NULL;
   if (!empty($fedora_object['RELS-INT'])) {
-    $xml = new SimpleXMLElement($fedora_object['RELS-INT']->content);
-    dpm($xml);
+    $xml = $fedora_object['RELS-INT']->content;
+    if (strpos($xml, 'rdf:about="info:fedora/' . $fedora_object->id . '/' . $fedora_datastream->id) !== FALSE) {
+      $mime_type = $fedora_datastream->mimetype;
+    }
   }
-  return $mime_type;
+
+  // Determine content model and content datastream
+  if ($mime_type == 'application/pdf') {
+    $content_models = array(
+      'islandora:sp_pdf',
+      'fedora-system:FedoraObject-3.0',
+    );
+    $content_datastream = 'OBJ';
+  }
+
+  if (!empty($content_models)) {
+    $namespace = explode(':', $fedora_object->id);
+    $content_models[] = 'fedora-system:FedoraObject-3.0';
+    $object_properties = array(
+      'state',
+      'createdDate',
+      'lastModifiedDate',
+      'label',
+      'owner',
+      'logMessage',
+    );
+    $datastreams = array(
+      'MODS',
+      'DC'
+    );
+    $islandora_object = $tuque->repository->constructObject($namespace[0]);
+    foreach ($object_properties as $property) {
+      if (isset($fedora_object->$property)) {
+        $islandora_object->$property = $fedora_object->$property;
+      }
+    }
+    foreach ($content_models as $content_model) {
+      $islandora_object->relationships->add(FEDORA_MODEL_URI, 'hasModel', $content_model);
+    }
+    $islandora_object->relationships->add(FEDORA_RELS_EXT_URI, 'isMemberOfCollection', $parent_collection);
+    foreach ($datastreams as $datastream) {
+      if ($fedora_object[$datastream]) {
+        $fedora_ds = $fedora_object[$datastream];
+        $ds = $islandora_object->constructDatastream($datastream);
+        $ds->label = $fedora_ds->label;
+        $ds->mimetype = $fedora_ds->mimetype;
+        $ds->control_group = 'M';
+        $ds->setContentFromString($fedora_ds->content);
+        $islandora_object->ingestDatastream($ds);
+      }
+    }
+    $ds = $islandora_object->constructDatastream($content_datastream);
+    $ds->label = $datastream->label;
+    $ds->mimetype = $datastream->mimetype;
+    $ds->control_group = 'M';
+    $ds->setContentFromString($datastream->content);
+    $islandora_object->ingestDatastream($ds);
+    islandora_add_object($islandora_object);
+  }
+  return $islandora_object;
 }
