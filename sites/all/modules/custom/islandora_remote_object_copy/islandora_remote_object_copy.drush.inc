@@ -17,11 +17,11 @@ function islandora_remote_object_copy_drush_command() {
       ),
       'fedora_username' => array(
         'description' => 'Username to access other fedora repo',
-        'required' => TRUE,
+        'required' => FALSE,
       ),
       'fedora_password' => array(
         'description' => 'Password to access other fedora repo',
-        'required' => TRUE,
+        'required' => FALSE,
       ),
       'fedora_pid' => array(
         'description' => 'Fedora object ID from other fedora repo',
