@@ -174,8 +174,7 @@ function islandora_remote_object_copy_get_collection_children($url, $fedora_acco
 }
 
 function islandora_remote_object_copy_batch_copy_collection_object($url, $fedora_account, $parent_collection, $fedora_pid, &$context) {
-  drupal_set_message(t('Imported @fedora_pid', array('@fedora_pid' => $fedora_pid)));
-  // islandora_remote_object_copy_copy_single_object($url, $fedora_account, $parent_collection, $fedora_pid);
+  islandora_remote_object_copy_copy_single_object($url, $fedora_account, $parent_collection, $fedora_pid);
 }
 
 /**
