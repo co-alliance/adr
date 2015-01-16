@@ -164,7 +164,11 @@ function islandora_remote_object_copy_get_collection_children($url, $fedora_acco
   $children = islandora_basic_collection_get_member_objects($fedora_object, 0, 10000, 'manage');
   $collection_children = array();
   foreach ($children as $child) {
-    $collection_children[] = $child['object']['value'];
+    if (is_array($child)) {
+      foreach ($child as $child_object) {
+        $collection_children[] = $child_object['object']['value'];
+      }
+    }
   }
   return $collection_children;
 }
