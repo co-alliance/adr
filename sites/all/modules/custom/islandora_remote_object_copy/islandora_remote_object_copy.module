@@ -6,42 +6,75 @@
 function islandora_remote_object_copy_menu() {
   $items = array();
 
-  $items['admin/config/development/islandora-remote-object-copy'] = array(
-    'title' => 'Islandora Remote Object Copy',
+  $items['admin/config/development/islandora-remote-object-copy-settings'] = array(
+    'title' => 'Islandora Remote Object Copy Settings',
+    'description' => 'Settings for the Islandora Remote Object Copy.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('islandora_remote_object_copy_copy_settings'),
+    'access arguments' => array('administer site configuration'),
+  );
+
+  $items['admin/config/development/islandora-remote-object-copy-single'] = array(
+    'title' => 'Islandora Remote Object Copy Single',
     'description' => 'Copy a remote fedora object into your islandora fedora.',
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('islandora_remote_object_copy_copy_form'),
+    'page arguments' => array('islandora_remote_object_copy_copy_single'),
+    'access arguments' => array('administer site configuration'),
+  );
+
+  $items['admin/config/development/islandora-remote-object-copy-collection'] = array(
+    'title' => 'Islandora Remote Object Copy Collection',
+    'description' => 'Copy records from a collection.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('islandora_remote_object_copy_copy_collection'),
     'access arguments' => array('administer site configuration'),
   );
 
   return $items;
 }
 
-/**
- * Primary copy form.
- */
-function islandora_remote_object_copy_copy_form($form, &$form_state) {
-  $form['fedora_url'] = array(
+function islandora_remote_object_copy_copy_settings($form, &$form_state) {
+  $form['islandora_remote_object_copy_uri'] = array(
     '#type' => 'textfield',
     '#title' => t('Fedora URL'),
     '#required' => TRUE,
     '#default_value' => variable_get('islandora_remote_object_copy_uri', ''),
   );
 
-  $form['fedora_username'] = array(
+  $form['islandora_remote_object_copy_username'] = array(
     '#type' => 'textfield',
     '#title' => t('Fedora Username'),
     '#required' => TRUE,
     '#default_value' => variable_get('islandora_remote_object_copy_username', ''),
   );
 
-  $form['fedora_password'] = array(
+  $form['islandora_remote_object_copy_password'] = array(
     '#type' => 'textfield',
     '#title' => t('Fedora Password'),
     '#required' => TRUE,
     '#default_value' => variable_get('islandora_remote_object_copy_password', ''),
   );
 
+  return system_settings_form($form);
+}
+
+function islandora_remote_object_copy_copy_collection($form, &$form_state) {
+  $form['collection'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Collection'),
+    '#description' => t('Collection from which to copy objects over'),
+    '#required' => TRUE,
+  );
+}
+
+function islandora_remote_object_copy_copy_collection_submit($form, &$form_state) {
+  
+}
+
+/**
+ * Primary copy form.
+ */
+function islandora_remote_object_copy_copy_single($form, &$form_state) {
   $form['parent_collection'] = array(
     '#type' => 'textfield',
     '#title' => t('Parent Collection'),
@@ -56,12 +89,6 @@ function islandora_remote_object_copy_copy_form($form, &$form_state) {
     '#required' => TRUE,
   );
 
-  $form['save_settings'] = array(
-    '#type' => 'checkbox',
-    '#title' => t('Only save settings'),
-    '#description' => t('This is only save the settings to connect to the fedora repo and not perform an import.'),
-  );
-
   $form['submit'] = array(
     '#type' => 'submit',
     '#value' => t('Submit'),
@@ -73,28 +100,22 @@ function islandora_remote_object_copy_copy_form($form, &$form_state) {
 /**
  * Submit copy form
  */
-function islandora_remote_object_copy_copy_form_submit($form, &$form_state) {
+function islandora_remote_object_copy_copy_single_submit($form, &$form_state) {
   $values = $form_state['values'];
-  variable_set('islandora_remote_object_copy_uri', $values['fedora_url']);
-  variable_set('islandora_remote_object_copy_username', $values['fedora_username']);
-  variable_set('islandora_remote_object_copy_password', $values['fedora_password']);
-
-  if (empty($values['save_settings'])) {
-    $url = $values['fedora_url'];
-    $fedora_account = new stdClass();
-    $fedora_account->user = $values['fedora_username'];
-    $fedora_account->pass = $values['fedora_password'];
-    $parent_collection = $values['parent_collection'];
-    $fedora_pid = $values['fedora_pid'];
-    islandora_remote_object_copy_copy_single_object($url, $fedora_account, $parent_collection, $fedora_pid);
-  }
+  $url = variable_get('islandora_remote_object_copy_uri', '');
+  $fedora_account = new stdClass();
+  $fedora_account->user = variable_get('islandora_remote_object_copy_username', '');
+  $fedora_account->pass = variable_get('islandora_remote_object_copy_password', '');
+  $parent_collection = $values['parent_collection'];
+  $fedora_pid = $values['fedora_pid'];
+  islandora_remote_object_copy_copy_single_object($url, $fedora_account, $parent_collection, $fedora_pid);
 }
 
 /**
  * Copies single object from secondary fedora repository to primary fedora repository.
  */
 function islandora_remote_object_copy_copy_single_object($url, $fedora_account, $parent_collection, $fedora_pid) {
-  @set_time_limit(3600);
+  @set_time_limit(3600*6);
   module_load_include('inc', 'islandora', 'includes/tuque');
   module_load_include('inc', 'islandora', 'includes/tuque_wrapper');
   module_load_include('inc', 'islandora_remote_object_copy', 'includes/UncachedFedoraRepository');
