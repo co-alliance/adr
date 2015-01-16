@@ -65,6 +65,13 @@ function islandora_remote_object_copy_copy_collection($form, &$form_state) {
     '#description' => t('Collection from which to copy objects over'),
     '#required' => TRUE,
   );
+
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Submit'),
+  );
+
+  return $form;
 }
 
 function islandora_remote_object_copy_copy_collection_submit($form, &$form_state) {
@@ -74,7 +81,34 @@ function islandora_remote_object_copy_copy_collection_submit($form, &$form_state
   $fedora_account->user = variable_get('islandora_remote_object_copy_username', '');
   $fedora_account->pass = variable_get('islandora_remote_object_copy_password', '');
   $collection_pid = $values['collection'];
-  islandora_remote_object_copy_copy_collection_object($url, $fedora_account, $collection_pid);
+
+  $children = islandora_remote_object_copy_get_collection_children($url, $fedora_account, $collection_pid);
+
+  $batch = array(
+    'operations' => array(),
+    'finished' => 'islandora_remote_object_copy_batch_copy_collection_finished',
+    'title' => t('Importing collection...'),
+    'init_message' => t('Preparing to import collection...'),
+    'progress_message' => t('Importing collection...'),
+    'error_message' => t('Collection could not be imported.'),
+  );
+
+  foreach ($children as $child) {
+    $batch['operations'][] = array(
+      'islandora_remote_object_copy_batch_copy_collection_object', array(
+        $url,
+        $fedora_account,
+        $collection_pid,
+        $child,
+      ),
+    );
+  }
+
+  batch_set($batch);
+}
+
+function islandora_remote_object_copy_batch_copy_collection_finished() {
+  drupal_set_message(t('Successfully imported collection!'));
 }
 
 /**
@@ -117,7 +151,7 @@ function islandora_remote_object_copy_copy_single_submit($form, &$form_state) {
   islandora_remote_object_copy_copy_single_object($url, $fedora_account, $parent_collection, $fedora_pid);
 }
 
-function islandora_remote_object_copy_copy_collection_object($url, $fedora_account, $collection_pid) {
+function islandora_remote_object_copy_get_collection_children($url, $fedora_account, $collection_pid) {
   module_load_include('inc', 'islandora', 'includes/tuque');
   module_load_include('inc', 'islandora', 'includes/tuque_wrapper');
   module_load_include('inc', 'islandora_remote_object_copy', 'includes/UncachedFedoraRepository');
@@ -128,7 +162,16 @@ function islandora_remote_object_copy_copy_collection_object($url, $fedora_accou
   $repository = new UncachedFedoraRepository($api, new SimpleCache());
   $fedora_object = $repository->getObject($collection_pid);
   $children = islandora_basic_collection_get_member_objects($fedora_object, 0, 10000, 'manage');
-  dpm($children);
+  $collection_children = array();
+  foreach ($children as $child) {
+    $collection_children[] = $child['object']['value'];
+  }
+  return $collection_children;
+}
+
+function islandora_remote_object_copy_batch_copy_collection_object($url, $fedora_account, $parent_collection, $fedora_pid, &$context) {
+  drupal_set_message(t('Imported @fedora_pid', array('@fedora_pid' => $fedora_pid)));
+  // islandora_remote_object_copy_copy_single_object($url, $fedora_account, $parent_collection, $fedora_pid);
 }
 
 /**
