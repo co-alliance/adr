@@ -33,6 +33,9 @@ function islandora_remote_object_copy_menu() {
   return $items;
 }
 
+/**
+ * Settings form for Remote Object Copy.
+ */
 function islandora_remote_object_copy_copy_settings($form, &$form_state) {
   $form['islandora_remote_object_copy_uri'] = array(
     '#type' => 'textfield',
@@ -58,6 +61,9 @@ function islandora_remote_object_copy_copy_settings($form, &$form_state) {
   return system_settings_form($form);
 }
 
+/**
+ * Form to copy collection from remote fedora repo.
+ */
 function islandora_remote_object_copy_copy_collection($form, &$form_state) {
   $form['collection'] = array(
     '#type' => 'textfield',
@@ -74,6 +80,9 @@ function islandora_remote_object_copy_copy_collection($form, &$form_state) {
   return $form;
 }
 
+/**
+ * Submits Form to copy collection from remote fedora repo.
+ */
 function islandora_remote_object_copy_copy_collection_submit($form, &$form_state) {
   $values = $form_state['values'];
   $url = variable_get('islandora_remote_object_copy_uri', '');
@@ -107,6 +116,9 @@ function islandora_remote_object_copy_copy_collection_submit($form, &$form_state
   batch_set($batch);
 }
 
+/**
+ * Batch function for finishing collection copy.
+ */
 function islandora_remote_object_copy_batch_copy_collection_finished() {
   drupal_set_message(t('Successfully imported collection!'));
 }
@@ -151,6 +163,9 @@ function islandora_remote_object_copy_copy_single_submit($form, &$form_state) {
   islandora_remote_object_copy_copy_single_object($url, $fedora_account, $parent_collection, $fedora_pid);
 }
 
+/**
+ * Returns all children that belong to a fedora collection.
+ */
 function islandora_remote_object_copy_get_collection_children($url, $fedora_account, $collection_pid) {
   module_load_include('inc', 'islandora', 'includes/tuque');
   module_load_include('inc', 'islandora', 'includes/tuque_wrapper');
@@ -173,6 +188,9 @@ function islandora_remote_object_copy_get_collection_children($url, $fedora_acco
   return $collection_children;
 }
 
+/**
+ * Wrapper function to copy single object.
+ */
 function islandora_remote_object_copy_batch_copy_collection_object($url, $fedora_account, $parent_collection, $fedora_pid, &$context) {
   islandora_remote_object_copy_copy_single_object($url, $fedora_account, $parent_collection, $fedora_pid);
 }
@@ -267,6 +285,9 @@ function islandora_remote_object_copy_create_compound_object($fedora_object, $pa
   return $islandora_object;
 }
 
+/**
+ * Creates compound object item.
+ */
 function islandora_remote_object_copy_create_compound_object_item($fedora_object_datastream, $islandora_object, $fedora_object, $parent_collection) {
   $tuque = islandora_get_tuque_connection();
   $fedora_datastream = $fedora_object[$fedora_object_datastream->id];
