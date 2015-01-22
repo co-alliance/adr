@@ -412,5 +412,14 @@ function _islandora_remote_object_copy_get_content_info($fedora_object, $fedora_
       'content_datastream' => 'OBJ',
     );
   }
+  // Image Object.
+  if (in_array($mime_type, array('image/tiff'))) {
+    $content_info = array(
+      'content_models' => array(
+        'islandora:sp_large_image_cmodel',
+      ),
+      'content_datastream' => 'OBJ',
+    );
+  }
   return $content_info;
 }
