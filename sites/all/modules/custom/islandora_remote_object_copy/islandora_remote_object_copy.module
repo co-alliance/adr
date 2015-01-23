@@ -362,7 +362,7 @@ function _islandora_remote_object_copy_object_has_unique_datastreams($fedora_obj
     if ($datastream->id == 'TN') {
       continue;
     }
-    if (strpos($xml, 'rdf:about="info:fedora/' . $fedora_object->id . '/' . $fedora_datastream->id) !== FALSE) {
+    if (strpos($rels_int, 'rdf:about="info:fedora/' . $fedora_object->id . '/' . $datastream->id) !== FALSE) {
       $counter++;
     }
   }
