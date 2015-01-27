@@ -222,6 +222,16 @@ projects[islandora_premis][download][type] = git
 projects[islandora_premis][download][url] = https://github.com/Islandora/islandora_premis.git
 projects[islandora_premis][download][tag] = 7.x-1.4
 
+projects[islandora_scholar][type] = module
+projects[islandora_scholar][download][type] = git
+projects[islandora_scholar][download][url] = https://github.com/Islandora/islandora_scholar.git
+projects[islandora_scholar][download][tag] = 7.x-1.4
+
+projects[islandora_solr_facet_pages][type] = module
+projects[islandora_solr_facet_pages][download][type] = git
+projects[islandora_solr_facet_pages][download][url] = https://github.com/Islandora/islandora_solr_facet_pages.git
+projects[islandora_solr_facet_pages][download][tag] = 7.x-1.4
+
 projects[islandora_xacml_editor][type] = module
 projects[islandora_xacml_editor][download][type] = git
 projects[islandora_xacml_editor][download][url] = https://github.com/Islandora/islandora_xacml_editor.git
