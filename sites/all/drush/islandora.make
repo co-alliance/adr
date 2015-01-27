@@ -197,6 +197,11 @@ projects[islandora_solution_pack_video][download][type] = git
 projects[islandora_solution_pack_video][download][url] = https://github.com/Islandora/islandora_solution_pack_video.git
 projects[islandora_solution_pack_video][download][tag] = 7.x-1.4
 
+projects[islandora_solution_pack_web_archive][type] = module
+projects[islandora_solution_pack_web_archive][download][type] = git
+projects[islandora_solution_pack_web_archive][download][url] = https://github.com/Islandora/islandora_solution_pack_web_archive.git
+projects[islandora_solution_pack_web_archive][download][tag] = 7.x-1.4
+
 projects[islandora_xacml_editor][type] = module
 projects[islandora_xacml_editor][download][type] = git
 projects[islandora_xacml_editor][download][url] = https://github.com/Islandora/islandora_xacml_editor.git
