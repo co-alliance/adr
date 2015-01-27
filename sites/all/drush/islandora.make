@@ -207,6 +207,16 @@ projects[islandora_bagit][download][type] = git
 projects[islandora_bagit][download][url] = https://github.com/Islandora/islandora_bagit.git
 projects[islandora_bagit][download][tag] = 7.x-1.4
 
+projects[islandora_checksum][type] = module
+projects[islandora_checksum][download][type] = git
+projects[islandora_checksum][download][url] = https://github.com/Islandora/islandora_checksum.git
+projects[islandora_checksum][download][tag] = 7.x-1.4
+
+projects[islandora_checksum_checker][type] = module
+projects[islandora_checksum_checker][download][type] = git
+projects[islandora_checksum_checker][download][url] = https://github.com/Islandora/islandora_checksum_checker.git
+projects[islandora_checksum_checker][download][tag] = 7.x-1.4
+
 projects[islandora_xacml_editor][type] = module
 projects[islandora_xacml_editor][download][type] = git
 projects[islandora_xacml_editor][download][url] = https://github.com/Islandora/islandora_xacml_editor.git
