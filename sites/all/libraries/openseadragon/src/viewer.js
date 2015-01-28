@@ -50,20 +50,13 @@ var THIS = {},
  * The options below are given in order that they appeared in the constructor
  * as arguments and we translate a positional call into an idiomatic call.
  *
- * @class
- * @extends OpenSeadragon.EventHandler
+ * @class Viewer
+ * @classdesc The main OpenSeadragon viewer class.
+ *
+ * @memberof OpenSeadragon
+ * @extends OpenSeadragon.EventSource
  * @extends OpenSeadragon.ControlDock
- * @param {Object} options
- * @param {String} options.element Id of Element to attach to,
- * @param {String} options.xmlPath  Xpath ( TODO: not sure! ),
- * @param {String} options.prefixUrl  Url used to prepend to paths, eg button
- *  images, etc.
- * @param {OpenSeadragon.Control[]} options.controls Array of OpenSeadragon.Control,
- * @param {OpenSeadragon.Overlay[]} options.overlays Array of OpenSeadragon.Overlay,
- * @param {OpenSeadragon.Control[]} options.overlayControls An Array of ( TODO:
- *  not sure! )
- * @property {OpenSeadragon.Viewport} viewport The viewer's viewport, where you
- *  can access zoom, pan, etc.
+ * @param {OpenSeadragon.Options} options - Viewer options.
  *
  **/
 $.Viewer = function( options ) {
@@ -81,8 +74,7 @@ $.Viewer = function( options ) {
             xmlPath:            args.length > 1 ? args[ 1 ] : undefined,
             prefixUrl:          args.length > 2 ? args[ 2 ] : undefined,
             controls:           args.length > 3 ? args[ 3 ] : undefined,
-            overlays:           args.length > 4 ? args[ 4 ] : undefined,
-            overlayControls:    args.length > 5 ? args[ 5 ] : undefined
+            overlays:           args.length > 4 ? args[ 4 ] : undefined
         };
     }
 
@@ -100,16 +92,44 @@ $.Viewer = function( options ) {
 
         //internal state and dom identifiers
         id:             options.id,
-        hash:           options.id,
+        hash:           options.hash || options.id,
 
         //dom nodes
+        /**
+         * The parent element of this Viewer instance, passed in when the Viewer was created.
+         * @member {Element} element
+         * @memberof OpenSeadragon.Viewer#
+         */
         element:        null,
-        canvas:         null,
+        /**
+         * A &lt;div&gt; element (provided by {@link OpenSeadragon.ControlDock}), the base element of this Viewer instance.<br><br>
+         * Child element of {@link OpenSeadragon.Viewer#element}.
+         * @member {Element} container
+         * @memberof OpenSeadragon.Viewer#
+         */
         container:      null,
+        /**
+         * A &lt;textarea&gt; element, the element where keyboard events are handled.<br><br>
+         * Child element of {@link OpenSeadragon.Viewer#container},
+         * positioned below {@link OpenSeadragon.Viewer#canvas}. 
+         * @member {Element} keyboardCommandArea
+         * @memberof OpenSeadragon.Viewer#
+         */
+        keyboardCommandArea: null,
+        /**
+         * A &lt;div&gt; element, the element where user-input events are handled for panning and zooming.<br><br>
+         * Child element of {@link OpenSeadragon.Viewer#container},
+         * positioned on top of {@link OpenSeadragon.Viewer#keyboardCommandArea}.<br><br>
+         * The parent of {@link OpenSeadragon.Drawer#canvas} instances. 
+         * @member {Element} canvas
+         * @memberof OpenSeadragon.Viewer#
+         */
+        canvas:         null,
 
-        //TODO: not sure how to best describe these
-        overlays:       [],
-        overlayControls:[],
+        // Overlays list. An overlay allows to add html on top of the viewer.
+        overlays:           [],
+        // Container inside the canvas where overlays are drawn.
+        overlaysContainer:  null,
 
         //private state properties
         previousBody:   [],
@@ -123,15 +143,31 @@ $.Viewer = function( options ) {
         customControls: [],
 
         //These are originally not part options but declared as members
-        //in initialize.  Its still considered idiomatic to put them here
+        //in initialize.  It's still considered idiomatic to put them here
         source:         null,
-        drawer:         null,
-        drawers:        [],
+        /**
+         * Handles rendering of tiles in the viewer. Created for each TileSource opened.
+         * @member {OpenSeadragon.Drawer} drawer
+         * @memberof OpenSeadragon.Viewer#
+         */
+        drawer:             null,
+        drawers:            [],
+        // Container inside the canvas where drawers (layers) are drawn.
+        drawersContainer:   null,
+        /**
+         * Handles coordinate-related functionality - zoom, pan, rotation, etc. Created for each TileSource opened.
+         * @member {OpenSeadragon.Viewport} viewport
+         * @memberof OpenSeadragon.Viewer#
+         */
         viewport:       null,
+        /**
+         * @member {OpenSeadragon.Navigator} navigator
+         * @memberof OpenSeadragon.Viewer#
+         */
         navigator:      null,
 
-        //A collection viewport is a seperate viewport used to provide
-        //simultanious rendering of sets of tiless
+        //A collection viewport is a separate viewport used to provide
+        //simultaneous rendering of sets of tiles
         collectionViewport:     null,
         collectionDrawer:       null,
 
@@ -146,6 +182,15 @@ $.Viewer = function( options ) {
         profiler:       null
 
     }, $.DEFAULT_SETTINGS, options );
+
+    if ( typeof( this.hash) === "undefined" ) {
+        throw new Error("A hash must be defined, either by specifying options.id or options.hash.");
+    }
+    if ( typeof( THIS[ this.hash ] ) !== "undefined" ) {
+        // We don't want to throw an error here, as the user might have discarded
+        // the previous viewer with the same hash and now want to recreate it.
+        $.console.warn("Hash " + this.hash + " has already been used.");
+    }
 
     //Private state properties
     THIS[ this.hash ] = {
@@ -168,12 +213,13 @@ $.Viewer = function( options ) {
     };
 
     this._updateRequestId = null;
+    this.currentOverlays = [];
 
     //Inherit some behaviors and properties
-    $.EventHandler.call( this );
+    $.EventSource.call( this );
 
-    this.addHandler( 'open-failed', function (source, args) {
-        var msg = $.getString( "Errors.Open-Failed", args.source, args.message);
+    this.addHandler( 'open-failed', function ( event ) {
+        var msg = $.getString( "Errors.OpenFailed", event.eventSource, event.message);
         _this._showMessage( msg );
     });
 
@@ -200,17 +246,26 @@ $.Viewer = function( options ) {
             if( this.tileSources.length > 1 ){
                 THIS[ this.hash ].sequenced = true;
             }
-            initialTileSource = this.tileSources[ 0 ];
+            
+            //Keeps the initial page within bounds
+            if ( this.initialPage > this.tileSources.length - 1 ){
+                this.initialPage = this.tileSources.length - 1;
+            }
+            
+            initialTileSource = this.tileSources[ this.initialPage ];
+            
+            //Update the sequence (aka currrent page) property
+            THIS[ this.hash ].sequence = this.initialPage;
         } else {
             initialTileSource = this.tileSources;
         }
-
-        this.open( initialTileSource );
     }
 
     this.element              = this.element || document.getElementById( this.id );
     this.canvas               = $.makeNeutralElement( "div" );
     this.keyboardCommandArea  = $.makeNeutralElement( "textarea" );
+    this.drawersContainer     = $.makeNeutralElement( "div" );
+    this.overlaysContainer    = $.makeNeutralElement( "div" );
 
     this.canvas.className = "openseadragon-canvas";
     (function( style ){
@@ -220,7 +275,8 @@ $.Viewer = function( options ) {
         style.position = "absolute";
         style.top      = "0px";
         style.left     = "0px";
-    }(  this.canvas.style ));
+    }(this.canvas.style));
+    $.setElementTouchActionNone( this.canvas );
 
     //the container is created through applying the ControlDock constructor above
     this.container.className = "openseadragon-container";
@@ -248,6 +304,8 @@ $.Viewer = function( options ) {
     this.container.insertBefore( this.canvas, this.container.firstChild );
     this.container.insertBefore( this.keyboardCommandArea, this.container.firstChild );
     this.element.appendChild( this.container );
+    this.canvas.appendChild( this.drawersContainer );
+    this.canvas.appendChild( this.overlaysContainer );
 
     //Used for toggling between fullscreen and default container size
     //TODO: these can be closure private and shared across Viewer
@@ -260,80 +318,92 @@ $.Viewer = function( options ) {
     this.keyboardCommandArea.innerTracker = new $.MouseTracker({
             _this : this,
             element:            this.keyboardCommandArea,
-            focusHandler:       function(){
-                var point    = $.getElementPosition( this.element );
-                window.scrollTo( 0, point.y );
+            focusHandler:       function( event ){
+                if ( !event.preventDefaultAction ) {
+                    var point    = $.getElementPosition( this.element );
+                    window.scrollTo( 0, point.y );
+                }
             },
 
-            keyHandler:         function(tracker, keyCode, shiftKey){
-                switch( keyCode ){
-                    case 61://=|+
-                        _this.viewport.zoomBy(1.1);
-                        _this.viewport.applyConstraints();
-                        return false;
-                    case 45://-|_
-                        _this.viewport.zoomBy(0.9);
-                        _this.viewport.applyConstraints();
-                        return false;
-                    case 48://0|)
-                        _this.viewport.goHome();
-                        _this.viewport.applyConstraints();
-                        return false;
-                    case 119://w
-                    case 87://W
-                    case 38://up arrow
-                        if (shiftKey) {
+            keyHandler:         function( event ){
+                if ( !event.preventDefaultAction ) {
+                    switch( event.keyCode ){
+                        case 61://=|+
                             _this.viewport.zoomBy(1.1);
-                        } else {
-                            _this.viewport.panBy(new $.Point(0, -0.05));
-                        }
-                        _this.viewport.applyConstraints();
-                        return false;
-                    case 115://s
-                    case 83://S
-                    case 40://down arrow
-                        if (shiftKey) {
+                            _this.viewport.applyConstraints();
+                            return false;
+                        case 45://-|_
                             _this.viewport.zoomBy(0.9);
-                        } else {
-                            _this.viewport.panBy(new $.Point(0, 0.05));
-                        }
-                        _this.viewport.applyConstraints();
-                        return false;
-                    case 97://a
-                    case 37://left arrow
-                        _this.viewport.panBy(new $.Point(-0.05, 0));
-                        _this.viewport.applyConstraints();
-                        return false;
-                    case 100://d
-                    case 39://right arrow
-                        _this.viewport.panBy(new $.Point(0.05, 0));
-                        _this.viewport.applyConstraints();
-                        return false;
-                    default:
-                        //console.log( 'navigator keycode %s', keyCode );
-                        return true;
+                            _this.viewport.applyConstraints();
+                            return false;
+                        case 48://0|)
+                            _this.viewport.goHome();
+                            _this.viewport.applyConstraints();
+                            return false;
+                        case 119://w
+                        case 87://W
+                        case 38://up arrow
+                            if ( event.shift ) {
+                                _this.viewport.zoomBy(1.1);
+                            } else {
+                                _this.viewport.panBy(new $.Point(0, -0.05));
+                            }
+                            _this.viewport.applyConstraints();
+                            return false;
+                        case 115://s
+                        case 83://S
+                        case 40://down arrow
+                            if ( event.shift ) {
+                                _this.viewport.zoomBy(0.9);
+                            } else {
+                                _this.viewport.panBy(new $.Point(0, 0.05));
+                            }
+                            _this.viewport.applyConstraints();
+                            return false;
+                        case 97://a
+                        case 37://left arrow
+                            _this.viewport.panBy(new $.Point(-0.05, 0));
+                            _this.viewport.applyConstraints();
+                            return false;
+                        case 100://d
+                        case 39://right arrow
+                            _this.viewport.panBy(new $.Point(0.05, 0));
+                            _this.viewport.applyConstraints();
+                            return false;
+                        default:
+                            //console.log( 'navigator keycode %s', event.keyCode );
+                            return true;
+                    }
                 }
             }
         }).setTracking( true ); // default state
 
 
     this.innerTracker = new $.MouseTracker({
-        element:            this.canvas,
-        clickTimeThreshold: this.clickTimeThreshold,
-        clickDistThreshold: this.clickDistThreshold,
-        clickHandler:       $.delegate( this, onCanvasClick ),
-        dragHandler:        $.delegate( this, onCanvasDrag ),
-        releaseHandler:     $.delegate( this, onCanvasRelease ),
-        scrollHandler:      $.delegate( this, onCanvasScroll )
+        element:               this.canvas,
+        clickTimeThreshold:    this.clickTimeThreshold,
+        clickDistThreshold:    this.clickDistThreshold,
+        dblClickTimeThreshold: this.dblClickTimeThreshold,
+        dblClickDistThreshold: this.dblClickDistThreshold,
+        clickHandler:          $.delegate( this, onCanvasClick ),
+        dblClickHandler:       $.delegate( this, onCanvasDblClick ),
+        dragHandler:           $.delegate( this, onCanvasDrag ),
+        dragEndHandler:        $.delegate( this, onCanvasDragEnd ),
+        releaseHandler:        $.delegate( this, onCanvasRelease ),
+        scrollHandler:         $.delegate( this, onCanvasScroll ),
+        pinchHandler:          $.delegate( this, onCanvasPinch )
     }).setTracking( this.mouseNavEnabled ? true : false ); // default state
 
     this.outerTracker = new $.MouseTracker({
-        element:            this.container,
-        clickTimeThreshold: this.clickTimeThreshold,
-        clickDistThreshold: this.clickDistThreshold,
-        enterHandler:       $.delegate( this, onContainerEnter ),
-        exitHandler:        $.delegate( this, onContainerExit ),
-        releaseHandler:     $.delegate( this, onContainerRelease )
+        element:               this.container,
+        clickTimeThreshold:    this.clickTimeThreshold,
+        clickDistThreshold:    this.clickDistThreshold,
+        dblClickTimeThreshold: this.dblClickTimeThreshold,
+        dblClickDistThreshold: this.dblClickDistThreshold,
+        enterHandler:          $.delegate( this, onContainerEnter ),
+        exitHandler:           $.delegate( this, onContainerExit ),
+        pressHandler:          $.delegate( this, onContainerPress ),
+        releaseHandler:        $.delegate( this, onContainerRelease )
     }).setTracking( this.mouseNavEnabled ? true : false ); // always tracking
 
     if( this.toolbar ){
@@ -342,6 +412,14 @@ $.Viewer = function( options ) {
 
     this.bindStandardControls();
     this.bindSequenceControls();
+
+    if ( initialTileSource ) {
+        this.open( initialTileSource );
+
+        if ( this.tileSources.length > 1 ) {
+            this._updateSequenceButtons( this.initialPage );
+        }
+    }
 
     for ( i = 0; i < this.customControls.length; i++ ) {
         this.addControl(
@@ -356,12 +434,11 @@ $.Viewer = function( options ) {
 
 };
 
-$.extend( $.Viewer.prototype, $.EventHandler.prototype, $.ControlDock.prototype, {
+$.extend( $.Viewer.prototype, $.EventSource.prototype, $.ControlDock.prototype, /** @lends OpenSeadragon.Viewer.prototype */{
 
 
     /**
      * @function
-     * @name OpenSeadragon.Viewer.prototype.isOpen
      * @return {Boolean}
      */
     isOpen: function () {
@@ -372,11 +449,10 @@ $.extend( $.Viewer.prototype, $.EventHandler.prototype, $.ControlDock.prototype,
      * A deprecated function, renamed to 'open' to match event name and
      * match current 'close' method.
      * @function
-     * @name OpenSeadragon.Viewer.prototype.openDzi
      * @param {String} dzi xml string or the url to a DZI xml document.
      * @return {OpenSeadragon.Viewer} Chainable.
      *
-     * @deprecated - use 'open' instead.
+     * @deprecated - use {@link OpenSeadragon.Viewer#open} instead.
      */
     openDzi: function ( dzi ) {
         return this.open( dzi );
@@ -386,11 +462,10 @@ $.extend( $.Viewer.prototype, $.EventHandler.prototype, $.ControlDock.prototype,
      * A deprecated function, renamed to 'open' to match event name and
      * match current 'close' method.
      * @function
-     * @name OpenSeadragon.Viewer.prototype.openTileSource
      * @param {String|Object|Function} See OpenSeadragon.Viewer.prototype.open
      * @return {OpenSeadragon.Viewer} Chainable.
      *
-     * @deprecated - use 'open' instead.
+     * @deprecated - use {@link OpenSeadragon.Viewer#open} instead.
      */
     openTileSource: function ( tileSource ) {
         return this.open( tileSource );
@@ -412,64 +487,32 @@ $.extend( $.Viewer.prototype, $.EventHandler.prototype, $.ControlDock.prototype,
      *      implementation. If the object has a property which is a function
      *      named 'getTileUrl', it is treated as a custom TileSource.
      * @function
-     * @name OpenSeadragon.Viewer.prototype.open
      * @param {String|Object|Function}
      * @return {OpenSeadragon.Viewer} Chainable.
+     * @fires OpenSeadragon.Viewer.event:open
+     * @fires OpenSeadragon.Viewer.event:open-failed
      */
     open: function ( tileSource ) {
-        var _this = this,
-            customTileSource,
-            readySource,
-            $TileSource,
-            options;
+        var _this = this;
 
         _this._hideMessage();
 
-        //allow plain xml strings or json strings to be parsed here
-        if( $.type( tileSource ) == 'string' ){
-            if( tileSource.match(/\s*<.*/) ){
-                tileSource = $.parseXml( tileSource );
-            }else if( tileSource.match(/\s*[\{\[].*/) ){
-                /*jshint evil:true*/
-                tileSource = eval( '('+tileSource+')' );
-            }
-        }
-
-        setTimeout(function(){
-            if ( $.type( tileSource ) == 'string') {
-                //If its still a string it means it must be a url at this point
-                tileSource = new $.TileSource( tileSource, function( readySource ){
-                    openTileSource( _this, readySource );
-                });
-                tileSource.addHandler( 'open-failed', function ( name, args ) {
-                    _this.raiseEvent( 'open-failed', args );
-                });
-
-            } else if ( $.isPlainObject( tileSource ) || tileSource.nodeType ){
-                if( $.isFunction( tileSource.getTileUrl ) ){
-                    //Custom tile source
-                    customTileSource = new $.TileSource(tileSource);
-                    customTileSource.getTileUrl = tileSource.getTileUrl;
-                    openTileSource( _this, customTileSource );
-                } else {
-                    //inline configuration
-                    $TileSource = $.TileSource.determineType( _this, tileSource );
-                    if ( !$TileSource ) {
-                        _this.raiseEvent( 'open-failed', {
-                            message: "Unable to load TileSource",
-                            source: tileSource
-                        });
-                        return;
-                    }
-                    options = $TileSource.prototype.configure.apply( _this, [ tileSource ]);
-                    readySource = new $TileSource( options );
-                    openTileSource( _this, readySource );
-                }
-            } else {
-                //can assume it's already a tile source implementation
-                openTileSource( _this, tileSource );
-            }
-        }, 1);
+        getTileSourceImplementation( _this, tileSource, function( tileSource ) {
+            openTileSource( _this, tileSource );
+        }, function( event ) {
+            /**
+             * Raised when an error occurs loading a TileSource.
+             *
+             * @event open-failed
+             * @memberof OpenSeadragon.Viewer
+             * @type {object}
+             * @property {OpenSeadragon.Viewer} eventSource - A reference to the Viewer which raised the event.
+             * @property {String} message
+             * @property {String} source
+             * @property {?Object} userData - Arbitrary subscriber-defined object.
+             */
+            _this.raiseEvent( 'open-failed', event );
+        });
 
         return this;
     },
@@ -477,10 +520,16 @@ $.extend( $.Viewer.prototype, $.EventHandler.prototype, $.ControlDock.prototype,
 
     /**
      * @function
-     * @name OpenSeadragon.Viewer.prototype.close
      * @return {OpenSeadragon.Viewer} Chainable.
+     * @fires OpenSeadragon.Viewer.event:close
      */
     close: function ( ) {
+        
+        if ( !THIS[ this.hash ] ) {
+            //this viewer has already been destroyed: returning immediately
+            return this;
+        }
+        
         if ( this._updateRequestId !== null ) {
             $.cancelAnimationFrame( this._updateRequestId );
             this._updateRequestId = null;
@@ -490,29 +539,97 @@ $.extend( $.Viewer.prototype, $.EventHandler.prototype, $.ControlDock.prototype,
             this.navigator.close();
         }
 
+        this.clearOverlays();
+        this.drawersContainer.innerHTML = "";
+        this.overlaysContainer.innerHTML = "";
+
         if ( this.drawer ) {
-            this.drawer.clearOverlays();
+            this.drawer.destroy();
         }
 
         this.source     = null;
         this.drawer     = null;
+        this.drawers    = [];
 
         this.viewport   = this.preserveViewport ? this.viewport : null;
-        //this.profiler   = null;
-        this.canvas.innerHTML = "";
+
 
         VIEWERS[ this.hash ] = null;
         delete VIEWERS[ this.hash ];
 
-        this.raiseEvent( 'close', { viewer: this } );
+        /**
+         * Raised when the viewer is closed (see {@link OpenSeadragon.Viewer#close}).
+         *
+         * @event close
+         * @memberof OpenSeadragon.Viewer
+         * @type {object}
+         * @property {OpenSeadragon.Viewer} eventSource - A reference to the Viewer which raised the event.
+         * @property {?Object} userData - Arbitrary subscriber-defined object.
+         */
+        this.raiseEvent( 'close' );
 
         return this;
     },
 
 
     /**
+     * Function to destroy the viewer and clean up everything created by OpenSeadragon.
+     * 
+     * Example:
+     * var viewer = OpenSeadragon({
+     *   [...]
+     * });
+     *
+     * //when you are done with the viewer:
+     * viewer.destroy();
+     * viewer = null; //important
+     *
      * @function
-     * @name OpenSeadragon.Viewer.prototype.isMouseNavEnabled
+     */
+    destroy: function( ) {
+        this.close();
+
+        //TODO: implement this...
+        //this.unbindSequenceControls()
+        //this.unbindStandardControls()        
+        
+        this.removeAllHandlers();
+
+        // Go through top element (passed to us) and remove all children
+        // Use removeChild to make sure it handles SVG or any non-html
+        // also it performs better - http://jsperf.com/innerhtml-vs-removechild/15
+        if (this.element){
+            while (this.element.firstChild) {
+                this.element.removeChild(this.element.firstChild);
+            }
+        }
+
+        // destroy the mouse trackers
+        if (this.keyboardCommandArea){
+            this.keyboardCommandArea.innerTracker.destroy();
+        }
+        if (this.innerTracker){
+            this.innerTracker.destroy();
+        }
+        if (this.outerTracker){
+            this.outerTracker.destroy();
+        }
+
+        THIS[ this.hash ] = null;
+        delete THIS[ this.hash ];
+
+        // clear all our references to dom objects
+        this.canvas = null;
+        this.keyboardCommandArea = null;
+        this.container = null;
+
+        // clear our reference to the main element - they will need to pass it in again, creating a new viewer
+        this.element = null;
+    },
+
+
+    /**
+     * @function
      * @return {Boolean}
      */
     isMouseNavEnabled: function () {
@@ -521,19 +638,29 @@ $.extend( $.Viewer.prototype, $.EventHandler.prototype, $.ControlDock.prototype,
 
     /**
      * @function
-     * @name OpenSeadragon.Viewer.prototype.setMouseNavEnabled
+     * @param {Boolean} enabled - true to enable, false to disable
      * @return {OpenSeadragon.Viewer} Chainable.
+     * @fires OpenSeadragon.Viewer.event:mouse-enabled
      */
     setMouseNavEnabled: function( enabled ){
         this.innerTracker.setTracking( enabled );
-        this.raiseEvent( 'mouse-enabled', { enabled: enabled, viewer: this } );
+        /**
+         * Raised when mouse/touch navigation is enabled or disabled (see {@link OpenSeadragon.Viewer#setMouseNavEnabled}).
+         *
+         * @event mouse-enabled
+         * @memberof OpenSeadragon.Viewer
+         * @type {object}
+         * @property {OpenSeadragon.Viewer} eventSource - A reference to the Viewer which raised the event.
+         * @property {Boolean} enabled
+         * @property {?Object} userData - Arbitrary subscriber-defined object.
+         */
+        this.raiseEvent( 'mouse-enabled', { enabled: enabled } );
         return this;
     },
 
 
     /**
      * @function
-     * @name OpenSeadragon.Viewer.prototype.areControlsEnabled
      * @return {Boolean}
      */
     areControlsEnabled: function () {
@@ -550,9 +677,9 @@ $.extend( $.Viewer.prototype, $.EventHandler.prototype, $.ControlDock.prototype,
      * Shows or hides the controls (e.g. the default navigation buttons).
      *
      * @function
-     * @name OpenSeadragon.Viewer.prototype.setControlsEnabled
      * @param {Boolean} true to show, false to hide.
      * @return {OpenSeadragon.Viewer} Chainable.
+     * @fires OpenSeadragon.Viewer.event:controls-enabled
      */
     setControlsEnabled: function( enabled ) {
         if( enabled ){
@@ -560,14 +687,23 @@ $.extend( $.Viewer.prototype, $.EventHandler.prototype, $.ControlDock.prototype,
         } else {
             beginControlsAutoHide( this );
         }
-        this.raiseEvent( 'controls-enabled', { enabled: enabled, viewer: this } );
+        /**
+         * Raised when the navigation controls are shown or hidden (see {@link OpenSeadragon.Viewer#setControlsEnabled}).
+         *
+         * @event controls-enabled
+         * @memberof OpenSeadragon.Viewer
+         * @type {object}
+         * @property {OpenSeadragon.Viewer} eventSource - A reference to the Viewer which raised the event.
+         * @property {Boolean} enabled
+         * @property {?Object} userData - Arbitrary subscriber-defined object.
+         */
+        this.raiseEvent( 'controls-enabled', { enabled: enabled } );
         return this;
     },
 
 
     /**
      * @function
-     * @name OpenSeadragon.Viewer.prototype.isFullPage
      * @return {Boolean}
      */
     isFullPage: function () {
@@ -578,42 +714,71 @@ $.extend( $.Viewer.prototype, $.EventHandler.prototype, $.ControlDock.prototype,
     /**
      * Toggle full page mode.
      * @function
-     * @name OpenSeadragon.Viewer.prototype.setFullPage
      * @param {Boolean} fullPage
      *      If true, enter full page mode.  If false, exit full page mode.
      * @return {OpenSeadragon.Viewer} Chainable.
+     * @fires OpenSeadragon.Viewer.event:pre-full-page
+     * @fires OpenSeadragon.Viewer.event:full-page
      */
     setFullPage: function( fullPage ) {
 
-        var body            = document.body,
-            bodyStyle       = body.style,
-            docStyle        = document.documentElement.style,
-            canvasStyle     = this.canvas.style,
-            _this           = this,
-            oldBounds,
-            newBounds,
-            viewer,
+        var body = document.body,
+            bodyStyle = body.style,
+            docStyle = document.documentElement.style,
+            _this = this,
             hash,
             nodes,
             i;
 
         //dont bother modifying the DOM if we are already in full page mode.
         if ( fullPage == this.isFullPage() ) {
-            return;
+            return this;
         }
 
+        var fullPageEventArgs = {
+            fullPage: fullPage,
+            preventDefaultAction: false
+        };
+        /**
+         * Raised when the viewer is about to change to/from full-page mode (see {@link OpenSeadragon.Viewer#setFullPage}).
+         *
+         * @event pre-full-page
+         * @memberof OpenSeadragon.Viewer
+         * @type {object}
+         * @property {OpenSeadragon.Viewer} eventSource - A reference to the Viewer which raised the event.
+         * @property {Boolean} fullPage - True if entering full-page mode, false if exiting full-page mode.
+         * @property {Boolean} preventDefaultAction - Set to true to prevent full-page mode change. Default: false.
+         * @property {?Object} userData - Arbitrary subscriber-defined object.
+         */
+        this.raiseEvent( 'pre-full-page', fullPageEventArgs );
+        if ( fullPageEventArgs.preventDefaultAction ) {
+            return this;
+        }
 
         if ( fullPage ) {
 
-            this.bodyOverflow   = bodyStyle.overflow;
-            this.docOverflow    = docStyle.overflow;
-            bodyStyle.overflow  = "hidden";
-            docStyle.overflow   = "hidden";
+            this.elementSize = $.getElementSize( this.element );
+            this.pageScroll = $.getPageScroll();
 
-            this.bodyWidth      = bodyStyle.width;
-            this.bodyHeight     = bodyStyle.height;
-            bodyStyle.width     = "100%";
-            bodyStyle.height    = "100%";
+            this.elementMargin = this.element.style.margin;
+            this.element.style.margin = "0";
+            this.elementPadding = this.element.style.padding;
+            this.element.style.padding = "0";
+
+            this.bodyMargin = bodyStyle.margin;
+            this.docMargin = docStyle.margin;
+            bodyStyle.margin = "0";
+            docStyle.margin = "0";
+
+            this.bodyPadding = bodyStyle.padding;
+            this.docPadding = docStyle.padding;
+            bodyStyle.padding = "0";
+            docStyle.padding = "0";
+
+            this.bodyWidth = bodyStyle.width;
+            this.bodyHeight = bodyStyle.height;
+            bodyStyle.width = "100%";
+            bodyStyle.height = "100%";
 
             //when entering full screen on the ipad it wasnt sufficient to leave
             //the body intact as only only the top half of the screen would
@@ -623,16 +788,17 @@ $.extend( $.Viewer.prototype, $.EventHandler.prototype, $.ControlDock.prototype,
             this.previousBody = [];
             THIS[ this.hash ].prevElementParent = this.element.parentNode;
             THIS[ this.hash ].prevNextSibling = this.element.nextSibling;
-            THIS[ this.hash ].prevElementSize = $.getElementSize( this.element );
+            THIS[ this.hash ].prevElementWidth = this.element.style.width;
+            THIS[ this.hash ].prevElementHeight = this.element.style.height;
             nodes = body.childNodes.length;
-            for ( i = 0; i < nodes; i ++ ){
+            for ( i = 0; i < nodes; i++ ) {
                 this.previousBody.push( body.childNodes[ 0 ] );
                 body.removeChild( body.childNodes[ 0 ] );
             }
 
             //If we've got a toolbar, we need to enable the user to use css to
             //preserve it in fullpage mode
-            if( this.toolbar && this.toolbar.element ){
+            if ( this.toolbar && this.toolbar.element ) {
                 //save a reference to the parent so we can put it back
                 //in the long run we need a better strategy
                 this.toolbar.parentNode = this.toolbar.element.parentNode;
@@ -647,38 +813,10 @@ $.extend( $.Viewer.prototype, $.EventHandler.prototype, $.ControlDock.prototype,
             $.addClass( this.element, 'fullpage' );
             body.appendChild( this.element );
 
-            if( $.supportsFullScreen ){
-                THIS[ this.hash ].onfullscreenchange = function() {
-                    /*
-                        fullscreenchange events don't include the new fullscreen status so we need to
-                        retrieve the current status from the fullscreen API. See:
-                        https://developer.mozilla.org/en-US/docs/Web/Reference/Events/fullscreenchange
-                    */
+            this.element.style.height = $.getWindowSize().y + 'px';
+            this.element.style.width = $.getWindowSize().x + 'px';
 
-                    if( $.isFullScreen() ){
-                        _this.setFullPage( true );
-                    } else {
-                        _this.setFullPage( false );
-                    }
-                };
-
-                $.requestFullScreen( document.body );
-
-                // The target of the event is always the document,
-                // but it is possible to retrieve the fullscreen element through the API
-                // Note that the API is still vendor-prefixed in browsers implementing it
-                document.addEventListener(
-                    $.fullScreenEventName,
-                    THIS[ this.hash ].onfullscreenchange
-                );
-                this.element.style.height = '100%';
-                this.element.style.width = '100%';
-            }else{
-                this.element.style.height = $.getWindowSize().y + 'px';
-                this.element.style.width = $.getWindowSize().x + 'px';
-            }
-
-            if( this.toolbar && this.toolbar.element ){
+            if ( this.toolbar && this.toolbar.element ) {
                 this.element.style.height = (
                     $.getElementSize( this.element ).y - $.getElementSize( this.toolbar.element ).y
                 ) + 'px';
@@ -687,31 +825,25 @@ $.extend( $.Viewer.prototype, $.EventHandler.prototype, $.ControlDock.prototype,
             THIS[ this.hash ].fullPage = true;
 
             // mouse will be inside container now
-            $.delegate( this, onContainerEnter )();
-
+            $.delegate( this, onContainerEnter )( {} );
 
         } else {
 
-            if( $.supportsFullScreen ){
-                document.removeEventListener(
-                    $.fullScreenEventName,
-                    THIS[ this.hash ].onfullscreenchange
-                );
-                $.cancelFullScreen( document );
-            }
+            this.element.style.margin = this.elementMargin;
+            this.element.style.padding = this.elementPadding;
 
-            bodyStyle.overflow  = this.bodyOverflow;
-            docStyle.overflow   = this.docOverflow;
+            bodyStyle.margin = this.bodyMargin;
+            docStyle.margin = this.docMargin;
 
-            bodyStyle.width     = this.bodyWidth;
-            bodyStyle.height    = this.bodyHeight;
+            bodyStyle.padding = this.bodyPadding;
+            docStyle.padding = this.docPadding;
 
-            canvasStyle.backgroundColor = "";
-            canvasStyle.color           = "";
+            bodyStyle.width = this.bodyWidth;
+            bodyStyle.height = this.bodyHeight;
 
             body.removeChild( this.element );
             nodes = this.previousBody.length;
-            for ( i = 0; i < nodes; i++ ){
+            for ( i = 0; i < nodes; i++ ) {
                 body.appendChild( this.previousBody.shift() );
             }
 
@@ -723,79 +855,159 @@ $.extend( $.Viewer.prototype, $.EventHandler.prototype, $.ControlDock.prototype,
 
             //If we've got a toolbar, we need to enable the user to use css to
             //reset it to its original state
-            if( this.toolbar && this.toolbar.element ){
+            if ( this.toolbar && this.toolbar.element ) {
                 body.removeChild( this.toolbar.element );
 
                 //Make sure the user has some ability to style the toolbar based
                 //on the mode
                 $.removeClass( this.toolbar.element, 'fullpage' );
-                //this.toolbar.element.style.position = 'relative';
+
                 this.toolbar.parentNode.insertBefore(
                     this.toolbar.element,
                     this.toolbar.nextSibling
                 );
                 delete this.toolbar.parentNode;
                 delete this.toolbar.nextSibling;
-
-                //this.container.style.top = 'auto';
             }
 
-            this.element.style.height = THIS[ this.hash ].prevElementSize.y + 'px';
-            this.element.style.width = THIS[ this.hash ].prevElementSize.x + 'px';
+            this.element.style.width = THIS[ this.hash ].prevElementWidth;
+            this.element.style.height = THIS[ this.hash ].prevElementHeight;
+
+            // After exiting fullPage or fullScreen, it can take some time
+            // before the browser can actually set the scroll.
+            var restoreScrollCounter = 0;
+            var restoreScroll = function() {
+                $.setPageScroll( _this.pageScroll );
+                var pageScroll = $.getPageScroll();
+                restoreScrollCounter++;
+                if ( restoreScrollCounter < 10 &&
+                    pageScroll.x !== _this.pageScroll.x ||
+                    pageScroll.y !== _this.pageScroll.y ) {
+                    $.requestAnimationFrame( restoreScroll );
+                }
+            };
+            $.requestAnimationFrame( restoreScroll );
 
             THIS[ this.hash ].fullPage = false;
 
             // mouse will likely be outside now
-            $.delegate( this, onContainerExit )();
-
+            $.delegate( this, onContainerExit )( { } );
 
         }
-        this.raiseEvent( 'fullpage', { fullpage: fullPage, viewer: this } );
 
-        if ( this.viewport ) {
-            oldBounds = this.viewport.getBounds();
-            this.viewport.resize( THIS[ this.hash ].prevContainerSize );
-            newBounds = this.viewport.getBounds();
+        if ( this.navigator && this.viewport ) {
+            this.navigator.update( this.viewport );
+        }
 
-            if ( fullPage ) {
-                THIS[ this.hash ].fsBoundsDelta = new $.Point(
-                    newBounds.width  / oldBounds.width,
-                    newBounds.height / oldBounds.height
-                );
-            } else {
-                this.viewport.update();
-                this.viewport.zoomBy(
-                    Math.max(
-                        THIS[ this.hash ].fsBoundsDelta.x,
-                        THIS[ this.hash ].fsBoundsDelta.y
-                    ),
-                    null,
-                    true
-                );
-                //Ensures that if multiple viewers are on a page, the viewers that
-                //were hidden during fullpage are 'reopened'
-                for( hash in VIEWERS ){
-                    viewer = VIEWERS[ hash ];
-                    if( viewer !== this && viewer != this.navigator ){
-                        viewer.open( viewer.source );
-                        if( viewer.navigator ){
-                            viewer.navigator.open( viewer.source );
-                        }
-                    }
-                }
+        /**
+         * Raised when the viewer has changed to/from full-page mode (see {@link OpenSeadragon.Viewer#setFullPage}).
+         *
+         * @event full-page
+         * @memberof OpenSeadragon.Viewer
+         * @type {object}
+         * @property {OpenSeadragon.Viewer} eventSource - A reference to the Viewer which raised the event.
+         * @property {Boolean} fullPage - True if changed to full-page mode, false if exited full-page mode.
+         * @property {?Object} userData - Arbitrary subscriber-defined object.
+         */
+        this.raiseEvent( 'full-page', { fullPage: fullPage } );
+
+        return this;
+    },
+
+    /**
+     * Toggle full screen mode if supported. Toggle full page mode otherwise.
+     * @function
+     * @param {Boolean} fullScreen
+     *      If true, enter full screen mode.  If false, exit full screen mode.
+     * @return {OpenSeadragon.Viewer} Chainable.
+     * @fires OpenSeadragon.Viewer.event:pre-full-screen
+     * @fires OpenSeadragon.Viewer.event:full-screen
+     */
+    setFullScreen: function( fullScreen ) {
+        var _this = this;
+
+        if ( !$.supportsFullScreen ) {
+            return this.setFullPage( fullScreen );
+        }
+
+        if ( $.isFullScreen() === fullScreen ) {
+            return this;
+        }
+
+        var fullScreeEventArgs = {
+            fullScreen: fullScreen,
+            preventDefaultAction: false
+        };
+        /**
+         * Raised when the viewer is about to change to/from full-screen mode (see {@link OpenSeadragon.Viewer#setFullScreen}).
+         *
+         * @event pre-full-screen
+         * @memberof OpenSeadragon.Viewer
+         * @type {object}
+         * @property {OpenSeadragon.Viewer} eventSource - A reference to the Viewer which raised the event.
+         * @property {Boolean} fullScreen - True if entering full-screen mode, false if exiting full-screen mode.
+         * @property {Boolean} preventDefaultAction - Set to true to prevent full-screen mode change. Default: false.
+         * @property {?Object} userData - Arbitrary subscriber-defined object.
+         */
+        this.raiseEvent( 'pre-full-screen', fullScreeEventArgs );
+        if ( fullScreeEventArgs.preventDefaultAction ) {
+            return this;
+        }
+
+        if ( fullScreen ) {
+
+            this.setFullPage( true );
+            // If the full page mode is not actually entered, we need to prevent
+            // the full screen mode.
+            if ( !this.isFullPage() ) {
+                return this;
             }
 
-            THIS[ this.hash ].forceRedraw = true;
-            updateOnce( this );
+            this.fullPageStyleWidth = this.element.style.width;
+            this.fullPageStyleHeight = this.element.style.height;
+            this.element.style.width = '100%';
+            this.element.style.height = '100%';
 
+            var onFullScreenChange = function() {
+                var isFullScreen = $.isFullScreen();
+                if ( !isFullScreen ) {
+                    $.removeEvent( document, $.fullScreenEventName, onFullScreenChange );
+                    $.removeEvent( document, $.fullScreenErrorEventName, onFullScreenChange );
+
+                    _this.setFullPage( false );
+                    if ( _this.isFullPage() ) {
+                        _this.element.style.width = _this.fullPageStyleWidth;
+                        _this.element.style.height = _this.fullPageStyleHeight;
+                    }
+                }
+                if ( _this.navigator && _this.viewport ) {
+                    _this.navigator.update( _this.viewport );
+                }
+                /**
+                 * Raised when the viewer has changed to/from full-screen mode (see {@link OpenSeadragon.Viewer#setFullScreen}).
+                 *
+                 * @event full-screen
+                 * @memberof OpenSeadragon.Viewer
+                 * @type {object}
+                 * @property {OpenSeadragon.Viewer} eventSource - A reference to the Viewer which raised the event.
+                 * @property {Boolean} fullScreen - True if changed to full-screen mode, false if exited full-screen mode.
+                 * @property {?Object} userData - Arbitrary subscriber-defined object.
+                 */
+                _this.raiseEvent( 'full-screen', { fullScreen: isFullScreen } );
+            };
+            $.addEvent( document, $.fullScreenEventName, onFullScreenChange );
+            $.addEvent( document, $.fullScreenErrorEventName, onFullScreenChange );
+
+            $.requestFullScreen( document.body );
+
+        } else {
+            $.exitFullScreen();
         }
         return this;
     },
 
-
     /**
      * @function
-     * @name OpenSeadragon.Viewer.prototype.isVisible
      * @return {Boolean}
      */
     isVisible: function () {
@@ -805,19 +1017,280 @@ $.extend( $.Viewer.prototype, $.EventHandler.prototype, $.ControlDock.prototype,
 
     /**
      * @function
-     * @name OpenSeadragon.Viewer.prototype.setVisible
+     * @param {Boolean} visible
      * @return {OpenSeadragon.Viewer} Chainable.
+     * @fires OpenSeadragon.Viewer.event:visible
      */
     setVisible: function( visible ){
         this.container.style.visibility = visible ? "" : "hidden";
-        this.raiseEvent( 'visible', { visible: visible, viewer: this } );
+        /**
+         * Raised when the viewer is shown or hidden (see {@link OpenSeadragon.Viewer#setVisible}).
+         *
+         * @event visible
+         * @memberof OpenSeadragon.Viewer
+         * @type {object}
+         * @property {OpenSeadragon.Viewer} eventSource - A reference to the Viewer which raised the event.
+         * @property {Boolean} visible
+         * @property {?Object} userData - Arbitrary subscriber-defined object.
+         */
+        this.raiseEvent( 'visible', { visible: visible } );
         return this;
     },
 
+    /**
+     * Add a layer.
+     * options.tileSource can be anything that {@link OpenSeadragon.Viewer#open}
+     *  supports except arrays of images as layers cannot be sequences.
+     * @function
+     * @param {Object} options
+     * @param {String|Object|Function} options.tileSource The TileSource of the layer.
+     * @param {Number} [options.opacity=1] The opacity of the layer.
+     * @param {Number} [options.level] The level of the layer. Added on top of
+     * all other layers if not specified.
+     * @returns {OpenSeadragon.Viewer} Chainable.
+     * @fires OpenSeadragon.Viewer.event:add-layer
+     * @fires OpenSeadragon.Viewer.event:add-layer-failed
+     */
+    addLayer: function( options ) {
+        var _this = this,
+            tileSource = options.tileSource;
+
+        if ( !this.isOpen() ) {
+            throw new Error( "An image must be loaded before adding layers." );
+        }
+        if ( !tileSource ) {
+            throw new Error( "No tile source provided as new layer." );
+        }
+        if ( this.collectionMode ) {
+            throw new Error( "Layers not supported in collection mode." );
+        }
+
+        function raiseAddLayerFailed( event ) {
+             /**
+             * Raised when an error occurs while adding a layer.
+             * @event add-layer-failed
+             * @memberOf OpenSeadragon.Viewer
+             * @type {object}
+             * @property {OpenSeadragon.Viewer} eventSource - A reference to the Viewer which raised the event.
+             * @property {String} message
+             * @property {String} source
+             * @property {Object} options The options passed to the addLayer method.
+             * @property {?Object} userData - Arbitrary subscriber-defined object.
+             */
+            _this.raiseEvent( 'add-layer-failed', event );
+        }
+
+        getTileSourceImplementation( this, tileSource, function( tileSource ) {
+
+            if ( tileSource instanceof Array ) {
+                raiseAddLayerFailed({
+                    message: "Sequences can not be added as layers.",
+                    source: tileSource,
+                    options: options
+                });
+                return;
+            }
+
+            for ( var i = 0; i < _this.drawers.length; i++ ) {
+                var otherAspectRatio = _this.drawers[ i ].source.aspectRatio;
+                var diff = otherAspectRatio - tileSource.aspectRatio;
+                if ( Math.abs( diff ) > _this.layersAspectRatioEpsilon ) {
+                    raiseAddLayerFailed({
+                        message: "Aspect ratio mismatch with layer " + i + ".",
+                        source: tileSource,
+                        options: options
+                    });
+                    return;
+                }
+            }
+
+            var drawer = new $.Drawer({
+                viewer: _this,
+                source: tileSource,
+                viewport: _this.viewport,
+                element: _this.drawersContainer,
+                opacity: options.opacity !== undefined ?
+                    options.opacity : _this.opacity,
+                maxImageCacheCount: _this.maxImageCacheCount,
+                imageLoaderLimit: _this.imageLoaderLimit,
+                minZoomImageRatio: _this.minZoomImageRatio,
+                wrapHorizontal: _this.wrapHorizontal,
+                wrapVertical: _this.wrapVertical,
+                immediateRender: _this.immediateRender,
+                blendTime: _this.blendTime,
+                alwaysBlend: _this.alwaysBlend,
+                minPixelRatio: _this.minPixelRatio,
+                timeout: _this.timeout,
+                debugMode: _this.debugMode,
+                debugGridColor: _this.debugGridColor
+            });
+            _this.drawers.push( drawer );
+            if ( options.level !== undefined ) {
+                _this.setLayerLevel( drawer, options.level );
+            }
+            THIS[ _this.hash ].forceRedraw = true;
+            /**
+             * Raised when a layer is successfully added.
+             * @event add-layer
+             * @memberOf OpenSeadragon.Viewer
+             * @type {object}
+             * @property {OpenSeadragon.Viewer} eventSource - A reference to the Viewer which raised the event.
+             * @property {Object} options The options passed to the addLayer method.
+             * @property {OpenSeadragon.Drawer} drawer The layer's underlying drawer.
+             * @property {?Object} userData - Arbitrary subscriber-defined object.
+             */
+            _this.raiseEvent( 'add-layer', {
+                options: options,
+                drawer: drawer
+            });
+        }, function( event ) {
+            event.options = options;
+            raiseAddLayerFailed(event);
+        } );
+
+        return this;
+    },
+
+    /**
+     * Get the layer at the specified level.
+     * @param {Number} level The layer to retrieve level.
+     * @returns {OpenSeadragon.Drawer} The layer at the specified level.
+     */
+    getLayerAtLevel: function( level ) {
+        if ( level >= this.drawers.length ) {
+            throw new Error( "Level bigger than number of layers." );
+        }
+        return this.drawers[ level ];
+    },
+
+    /**
+     * Get the level of the layer associated with the given drawer or -1 if not
+     * present.
+     * @param {OpenSeadragon.Drawer} drawer The underlying drawer of the layer.
+     * @returns {Number} The level of the layer or -1 if not present.
+     */
+    getLevelOfLayer: function( drawer ) {
+        return $.indexOf( this.drawers, drawer );
+    },
+
+    /**
+     * Get the number of layers used.
+     * @returns {Number} The number of layers used.
+     */
+    getLayersCount: function() {
+        return this.drawers.length;
+    },
+
+    /**
+     * Change the level of a layer so that it appears over or under others.
+     * @param {OpenSeadragon.Drawer} drawer The underlying drawer of the changing
+     * level layer.
+     * @param {Number} level The new level
+     * @returns {OpenSeadragon.Viewer} Chainable.
+     * @fires OpenSeadragon.Viewer.event:layer-level-changed
+     */
+    setLayerLevel: function( drawer, level ) {
+        var oldLevel = this.getLevelOfLayer( drawer );
+
+        if ( level >= this.drawers.length ) {
+            throw new Error( "Level bigger than number of layers." );
+        }
+        if ( level === oldLevel || oldLevel === -1 ) {
+            return this;
+        }
+        if ( level === 0 || oldLevel === 0 ) {
+            if ( THIS[ this.hash ].sequenced ) {
+                throw new Error( "Cannot reassign base level when in sequence mode." );
+            }
+            // We need to re-assign the base drawer and the source
+            this.drawer = level === 0 ? drawer : this.getLayerAtLevel( level );
+            this.source = this.drawer.source;
+        }
+        this.drawers.splice( oldLevel, 1 );
+        this.drawers.splice( level, 0, drawer );
+        this.drawersContainer.removeChild( drawer.canvas );
+        if ( level === 0 ) {
+            var nextLevelCanvas = this.drawers[ 1 ].canvas;
+            nextLevelCanvas.parentNode.insertBefore( drawer.canvas,
+                nextLevelCanvas );
+        } else {
+            // Insert right after layer at level - 1
+            var prevLevelCanvas = this.drawers[level - 1].canvas;
+            prevLevelCanvas.parentNode.insertBefore( drawer.canvas,
+                prevLevelCanvas.nextSibling );
+        }
+
+        /**
+         * Raised when the order of the layers has been changed.
+         * @event layer-level-changed
+         * @memberOf OpenSeadragon.Viewer
+         * @type {object}
+         * @property {OpenSeadragon.Viewer} eventSource - A reference to the Viewer which raised the event.
+         * @property {OpenSeadragon.Drawer} drawer - The drawer which level has
+         * been changed
+         * @property {Number} previousLevel - The previous level of the drawer
+         * @property {Number} newLevel - The new level of the drawer
+         * @property {?Object} userData - Arbitrary subscriber-defined object.
+         */
+        this.raiseEvent( 'layer-level-changed', {
+            drawer: drawer,
+            previousLevel: oldLevel,
+            newLevel: level
+        } );
+
+        return this;
+    },
+
+    /**
+     * Remove a layer. If there is only one layer, close the viewer.
+     * @function
+     * @param {OpenSeadragon.Drawer} drawer The underlying drawer of the layer 
+     * to remove
+     * @returns {OpenSeadragon.Viewer} Chainable.
+     * @fires OpenSeadragon.Viewer.event:remove-layer
+     */
+    removeLayer: function( drawer ) {
+        var index = this.drawers.indexOf( drawer );
+        if ( index === -1 ) {
+            return this;
+        }
+        if ( index === 0 ) {
+            if ( THIS[ this.hash ].sequenced ) {
+                throw new Error( "Cannot remove base layer when in sequence mode." );
+            }
+            if ( this.drawers.length === 1 ) {
+                this.close();
+                return this;
+            }
+            this.drawer = this.drawers[ 1 ];
+        }
+
+        this.drawers.splice( index, 1 );
+        this.drawersContainer.removeChild( drawer.canvas );
+        /**
+         * Raised when a layer is removed.
+         * @event remove-layer
+         * @memberOf OpenSeadragon.Viewer
+         * @type {object}
+         * @property {OpenSeadragon.Viewer} eventSource - A reference to the Viewer which raised the event.
+         * @property {OpenSeadragon.Drawer} drawer The layer's underlying drawer.
+         * @property {?Object} userData - Arbitrary subscriber-defined object.
+         */
+        this.raiseEvent( 'remove-layer', { drawer: drawer } );
+        return this;
+    },
+
+    /**
+     * Force the viewer to redraw its drawers.
+     * @returns {OpenSeadragon.Viewer} Chainable.
+     */
+    forceRedraw: function() {
+        THIS[ this.hash ].forceRedraw = true;
+        return this;
+    },
 
     /**
      * @function
-     * @name OpenSeadragon.Viewer.prototype.bindSequenceControls
      * @return {OpenSeadragon.Viewer} Chainable.
      */
     bindSequenceControls: function(){
@@ -892,7 +1365,7 @@ $.extend( $.Viewer.prototype, $.EventHandler.prototype, $.ControlDock.prototype,
                 }else{
                     this.addControl(
                         this.pagingControl,
-                        {anchor: $.ControlAnchor.TOP_LEFT}
+                        {anchor: this.sequenceControlAnchor || $.ControlAnchor.TOP_LEFT}
                     );
                 }
             }
@@ -903,7 +1376,6 @@ $.extend( $.Viewer.prototype, $.EventHandler.prototype, $.ControlDock.prototype,
 
     /**
      * @function
-     * @name OpenSeadragon.Viewer.prototype.bindStandardControls
      * @return {OpenSeadragon.Viewer} Chainable.
      */
     bindStandardControls: function(){
@@ -916,7 +1388,9 @@ $.extend( $.Viewer.prototype, $.EventHandler.prototype, $.ControlDock.prototype,
             beginZoomingOutHandler  = $.delegate( this, beginZoomingOut ),
             doSingleZoomOutHandler  = $.delegate( this, doSingleZoomOut ),
             onHomeHandler           = $.delegate( this, onHome ),
-            onFullPageHandler       = $.delegate( this, onFullPage ),
+            onFullScreenHandler     = $.delegate( this, onFullScreen ),
+            onRotateLeftHandler     = $.delegate( this, onRotateLeft ),
+            onRotateRightHandler    = $.delegate( this, onRotateRight ),
             onFocusHandler          = $.delegate( this, onFocus ),
             onBlurHandler           = $.delegate( this, onBlur ),
             navImages               = this.navImages,
@@ -924,79 +1398,118 @@ $.extend( $.Viewer.prototype, $.EventHandler.prototype, $.ControlDock.prototype,
             useGroup                = true ;
 
 
-        if( this.showNavigationControl ){
+        if ( this.showNavigationControl ) {
 
-            if( this.zoomInButton || this.zoomOutButton || this.homeButton || this.fullPageButton ){
+            if( this.zoomInButton || this.zoomOutButton ||
+                this.homeButton || this.fullPageButton ||
+                this.rotateLeftButton || this.rotateRightButton ) {
                 //if we are binding to custom buttons then layout and
                 //grouping is the responsibility of the page author
                 useGroup = false;
             }
 
-            buttons.push( this.zoomInButton = new $.Button({
-                element:    this.zoomInButton ? $.getElement( this.zoomInButton ) : null,
-                clickTimeThreshold: this.clickTimeThreshold,
-                clickDistThreshold: this.clickDistThreshold,
-                tooltip:    $.getString( "Tooltips.ZoomIn" ),
-                srcRest:    resolveUrl( this.prefixUrl, navImages.zoomIn.REST ),
-                srcGroup:   resolveUrl( this.prefixUrl, navImages.zoomIn.GROUP ),
-                srcHover:   resolveUrl( this.prefixUrl, navImages.zoomIn.HOVER ),
-                srcDown:    resolveUrl( this.prefixUrl, navImages.zoomIn.DOWN ),
-                onPress:    beginZoomingInHandler,
-                onRelease:  endZoomingHandler,
-                onClick:    doSingleZoomInHandler,
-                onEnter:    beginZoomingInHandler,
-                onExit:     endZoomingHandler,
-                onFocus:    onFocusHandler,
-                onBlur:     onBlurHandler
-            }));
+            if ( this.showZoomControl ) {
+                buttons.push( this.zoomInButton = new $.Button({
+                    element:    this.zoomInButton ? $.getElement( this.zoomInButton ) : null,
+                    clickTimeThreshold: this.clickTimeThreshold,
+                    clickDistThreshold: this.clickDistThreshold,
+                    tooltip:    $.getString( "Tooltips.ZoomIn" ),
+                    srcRest:    resolveUrl( this.prefixUrl, navImages.zoomIn.REST ),
+                    srcGroup:   resolveUrl( this.prefixUrl, navImages.zoomIn.GROUP ),
+                    srcHover:   resolveUrl( this.prefixUrl, navImages.zoomIn.HOVER ),
+                    srcDown:    resolveUrl( this.prefixUrl, navImages.zoomIn.DOWN ),
+                    onPress:    beginZoomingInHandler,
+                    onRelease:  endZoomingHandler,
+                    onClick:    doSingleZoomInHandler,
+                    onEnter:    beginZoomingInHandler,
+                    onExit:     endZoomingHandler,
+                    onFocus:    onFocusHandler,
+                    onBlur:     onBlurHandler
+                }));
 
-            buttons.push( this.zoomOutButton = new $.Button({
-                element:    this.zoomOutButton ? $.getElement( this.zoomOutButton ) : null,
-                clickTimeThreshold: this.clickTimeThreshold,
-                clickDistThreshold: this.clickDistThreshold,
-                tooltip:    $.getString( "Tooltips.ZoomOut" ),
-                srcRest:    resolveUrl( this.prefixUrl, navImages.zoomOut.REST ),
-                srcGroup:   resolveUrl( this.prefixUrl, navImages.zoomOut.GROUP ),
-                srcHover:   resolveUrl( this.prefixUrl, navImages.zoomOut.HOVER ),
-                srcDown:    resolveUrl( this.prefixUrl, navImages.zoomOut.DOWN ),
-                onPress:    beginZoomingOutHandler,
-                onRelease:  endZoomingHandler,
-                onClick:    doSingleZoomOutHandler,
-                onEnter:    beginZoomingOutHandler,
-                onExit:     endZoomingHandler,
-                onFocus:    onFocusHandler,
-                onBlur:     onBlurHandler
-            }));
+                buttons.push( this.zoomOutButton = new $.Button({
+                    element:    this.zoomOutButton ? $.getElement( this.zoomOutButton ) : null,
+                    clickTimeThreshold: this.clickTimeThreshold,
+                    clickDistThreshold: this.clickDistThreshold,
+                    tooltip:    $.getString( "Tooltips.ZoomOut" ),
+                    srcRest:    resolveUrl( this.prefixUrl, navImages.zoomOut.REST ),
+                    srcGroup:   resolveUrl( this.prefixUrl, navImages.zoomOut.GROUP ),
+                    srcHover:   resolveUrl( this.prefixUrl, navImages.zoomOut.HOVER ),
+                    srcDown:    resolveUrl( this.prefixUrl, navImages.zoomOut.DOWN ),
+                    onPress:    beginZoomingOutHandler,
+                    onRelease:  endZoomingHandler,
+                    onClick:    doSingleZoomOutHandler,
+                    onEnter:    beginZoomingOutHandler,
+                    onExit:     endZoomingHandler,
+                    onFocus:    onFocusHandler,
+                    onBlur:     onBlurHandler
+                }));
+            }
 
-            buttons.push( this.homeButton = new $.Button({
-                element:    this.homeButton ? $.getElement( this.homeButton ) : null,
-                clickTimeThreshold: this.clickTimeThreshold,
-                clickDistThreshold: this.clickDistThreshold,
-                tooltip:    $.getString( "Tooltips.Home" ),
-                srcRest:    resolveUrl( this.prefixUrl, navImages.home.REST ),
-                srcGroup:   resolveUrl( this.prefixUrl, navImages.home.GROUP ),
-                srcHover:   resolveUrl( this.prefixUrl, navImages.home.HOVER ),
-                srcDown:    resolveUrl( this.prefixUrl, navImages.home.DOWN ),
-                onRelease:  onHomeHandler,
-                onFocus:    onFocusHandler,
-                onBlur:     onBlurHandler
-            }));
+            if ( this.showHomeControl ) {
+                buttons.push( this.homeButton = new $.Button({
+                    element:    this.homeButton ? $.getElement( this.homeButton ) : null,
+                    clickTimeThreshold: this.clickTimeThreshold,
+                    clickDistThreshold: this.clickDistThreshold,
+                    tooltip:    $.getString( "Tooltips.Home" ),
+                    srcRest:    resolveUrl( this.prefixUrl, navImages.home.REST ),
+                    srcGroup:   resolveUrl( this.prefixUrl, navImages.home.GROUP ),
+                    srcHover:   resolveUrl( this.prefixUrl, navImages.home.HOVER ),
+                    srcDown:    resolveUrl( this.prefixUrl, navImages.home.DOWN ),
+                    onRelease:  onHomeHandler,
+                    onFocus:    onFocusHandler,
+                    onBlur:     onBlurHandler
+                }));
+            }
 
-            buttons.push( this.fullPageButton = new $.Button({
-                element:    this.fullPageButton ? $.getElement( this.fullPageButton ) : null,
-                clickTimeThreshold: this.clickTimeThreshold,
-                clickDistThreshold: this.clickDistThreshold,
-                tooltip:    $.getString( "Tooltips.FullPage" ),
-                srcRest:    resolveUrl( this.prefixUrl, navImages.fullpage.REST ),
-                srcGroup:   resolveUrl( this.prefixUrl, navImages.fullpage.GROUP ),
-                srcHover:   resolveUrl( this.prefixUrl, navImages.fullpage.HOVER ),
-                srcDown:    resolveUrl( this.prefixUrl, navImages.fullpage.DOWN ),
-                onRelease:  onFullPageHandler,
-                onFocus:    onFocusHandler,
-                onBlur:     onBlurHandler
-            }));
+            if ( this.showFullPageControl ) {
+                buttons.push( this.fullPageButton = new $.Button({
+                    element:    this.fullPageButton ? $.getElement( this.fullPageButton ) : null,
+                    clickTimeThreshold: this.clickTimeThreshold,
+                    clickDistThreshold: this.clickDistThreshold,
+                    tooltip:    $.getString( "Tooltips.FullPage" ),
+                    srcRest:    resolveUrl( this.prefixUrl, navImages.fullpage.REST ),
+                    srcGroup:   resolveUrl( this.prefixUrl, navImages.fullpage.GROUP ),
+                    srcHover:   resolveUrl( this.prefixUrl, navImages.fullpage.HOVER ),
+                    srcDown:    resolveUrl( this.prefixUrl, navImages.fullpage.DOWN ),
+                    onRelease:  onFullScreenHandler,
+                    onFocus:    onFocusHandler,
+                    onBlur:     onBlurHandler
+                }));
+            }
 
-            if( useGroup ){
+            if ( this.showRotationControl ) {
+                buttons.push( this.rotateLeftButton = new $.Button({
+                    element:    this.rotateLeftButton ? $.getElement( this.rotateLeftButton ) : null,
+                    clickTimeThreshold: this.clickTimeThreshold,
+                    clickDistThreshold: this.clickDistThreshold,
+                    tooltip:    $.getString( "Tooltips.RotateLeft" ),
+                    srcRest:    resolveUrl( this.prefixUrl, navImages.rotateleft.REST ),
+                    srcGroup:   resolveUrl( this.prefixUrl, navImages.rotateleft.GROUP ),
+                    srcHover:   resolveUrl( this.prefixUrl, navImages.rotateleft.HOVER ),
+                    srcDown:    resolveUrl( this.prefixUrl, navImages.rotateleft.DOWN ),
+                    onRelease:  onRotateLeftHandler,
+                    onFocus:    onFocusHandler,
+                    onBlur:     onBlurHandler
+                }));
+
+                buttons.push( this.rotateRightButton = new $.Button({
+                    element:    this.rotateRightButton ? $.getElement( this.rotateRightButton ) : null,
+                    clickTimeThreshold: this.clickTimeThreshold,
+                    clickDistThreshold: this.clickDistThreshold,
+                    tooltip:    $.getString( "Tooltips.RotateRight" ),
+                    srcRest:    resolveUrl( this.prefixUrl, navImages.rotateright.REST ),
+                    srcGroup:   resolveUrl( this.prefixUrl, navImages.rotateright.GROUP ),
+                    srcHover:   resolveUrl( this.prefixUrl, navImages.rotateright.HOVER ),
+                    srcDown:    resolveUrl( this.prefixUrl, navImages.rotateright.DOWN ),
+                    onRelease:  onRotateRightHandler,
+                    onFocus:    onFocusHandler,
+                    onBlur:     onBlurHandler
+                }));
+
+            }
+
+            if ( useGroup ) {
                 this.buttons = new $.ButtonGroup({
                     buttons:            buttons,
                     clickTimeThreshold: this.clickTimeThreshold,
@@ -1011,10 +1524,10 @@ $.extend( $.Viewer.prototype, $.EventHandler.prototype, $.ControlDock.prototype,
                         this.navControl,
                         {anchor: $.ControlAnchor.TOP_LEFT}
                     );
-                }else{
+                } else {
                     this.addControl(
                         this.navControl,
-                        {anchor: $.ControlAnchor.TOP_LEFT}
+                        {anchor: this.navigationControlAnchor || $.ControlAnchor.TOP_LEFT}
                     );
                 }
             }
@@ -1022,61 +1535,249 @@ $.extend( $.Viewer.prototype, $.EventHandler.prototype, $.ControlDock.prototype,
         }
         return this;
     },
-
+    
+    /**
+     * Gets the active page of a sequence
+     * @function
+     * @return {Number}
+     */
+    currentPage: function() {
+        return THIS[ this.hash ].sequence;
+    },
 
     /**
      * @function
-     * @name OpenSeadragon.Viewer.prototype.goToPage
      * @return {OpenSeadragon.Viewer} Chainable.
+     * @fires OpenSeadragon.Viewer.event:page
      */
     goToPage: function( page ){
-        //page is a 1 based index so normalize now
-        //page = page;
-        this.raiseEvent( 'page', { page: page, viewer: this } );
-
-        if( this.tileSources.length > page ){
+        if( page >= 0 && page < this.tileSources.length ){
+            /**
+             * Raised when the page is changed on a viewer configured with multiple image sources (see {@link OpenSeadragon.Viewer#goToPage}).
+             *
+             * @event page
+             * @memberof OpenSeadragon.Viewer
+             * @type {Object}
+             * @property {OpenSeadragon.Viewer} eventSource - A reference to the Viewer which raised the event.
+             * @property {Number} page - The page index.
+             * @property {?Object} userData - Arbitrary subscriber-defined object.
+             */
+            this.raiseEvent( 'page', { page: page } );
 
             THIS[ this.hash ].sequence = page;
 
-            if( this.nextButton ){
-                if( ( this.tileSources.length - 1 ) === page  ){
+            this._updateSequenceButtons( page );
+
+            this.open( this.tileSources[ page ] );
+
+            if( this.referenceStrip ){
+                this.referenceStrip.setFocus( page );
+            }
+        }
+
+        return this;
+    },
+
+   /**
+     * Adds an html element as an overlay to the current viewport.  Useful for
+     * highlighting words or areas of interest on an image or other zoomable
+     * interface. The overlays added via this method are removed when the viewport
+     * is closed which include when changing page.
+     * @method
+     * @param {Element|String|Object} element - A reference to an element or an id for
+     *      the element which will overlayed. Or an Object specifying the configuration for the overlay
+     * @param {OpenSeadragon.Point|OpenSeadragon.Rect} location - The point or
+     *      rectangle which will be overlayed.
+     * @param {OpenSeadragon.OverlayPlacement} placement - The position of the
+     *      viewport which the location coordinates will be treated as relative
+     *      to.
+     * @param {function} onDraw - If supplied the callback is called when the overlay
+     *      needs to be drawn. It it the responsibility of the callback to do any drawing/positioning.
+     *      It is passed position, size and element.
+     * @return {OpenSeadragon.Viewer} Chainable.
+     * @fires OpenSeadragon.Viewer.event:add-overlay
+     */
+    addOverlay: function( element, location, placement, onDraw ) {
+        var options;
+        if( $.isPlainObject( element ) ){
+            options = element;
+        } else {
+            options = {
+                element: element,
+                location: location,
+                placement: placement,
+                onDraw: onDraw
+            };
+        }
+
+        element = $.getElement( options.element );
+
+        if ( getOverlayIndex( this.currentOverlays, element ) >= 0 ) {
+            // they're trying to add a duplicate overlay
+            return this;
+        }
+        this.currentOverlays.push( getOverlayObject( this, options ) );
+        THIS[ this.hash ].forceRedraw = true;
+        /**
+         * Raised when an overlay is added to the viewer (see {@link OpenSeadragon.Viewer#addOverlay}).
+         *
+         * @event add-overlay
+         * @memberof OpenSeadragon.Viewer
+         * @type {object}
+         * @property {OpenSeadragon.Viewer} eventSource - A reference to the Viewer which raised the event.
+         * @property {Element} element - The overlay element.
+         * @property {OpenSeadragon.Point|OpenSeadragon.Rect} location
+         * @property {OpenSeadragon.OverlayPlacement} placement
+         * @property {?Object} userData - Arbitrary subscriber-defined object.
+         */
+        this.raiseEvent( 'add-overlay', {
+            element: element,
+            location: options.location,
+            placement: options.placement
+        });
+        return this;
+    },
+
+    /**
+     * Updates the overlay represented by the reference to the element or
+     * element id moving it to the new location, relative to the new placement.
+     * @method
+     * @param {OpenSeadragon.Point|OpenSeadragon.Rect} location - The point or
+     *      rectangle which will be overlayed.
+     * @param {OpenSeadragon.OverlayPlacement} placement - The position of the
+     *      viewport which the location coordinates will be treated as relative
+     *      to.
+     * @return {OpenSeadragon.Viewer} Chainable.
+     * @fires OpenSeadragon.Viewer.event:update-overlay
+     */
+    updateOverlay: function( element, location, placement ) {
+        var i;
+
+        element = $.getElement( element );
+        i = getOverlayIndex( this.currentOverlays, element );
+
+        if ( i >= 0 ) {
+            this.currentOverlays[ i ].update( location, placement );
+            THIS[ this.hash ].forceRedraw = true;
+            /**
+             * Raised when an overlay's location or placement changes
+             * (see {@link OpenSeadragon.Viewer#updateOverlay}).
+             *
+             * @event update-overlay
+             * @memberof OpenSeadragon.Viewer
+             * @type {object}
+             * @property {OpenSeadragon.Viewer} eventSource - A reference to the
+             * Viewer which raised the event.
+             * @property {Element} element
+             * @property {OpenSeadragon.Point|OpenSeadragon.Rect} location
+             * @property {OpenSeadragon.OverlayPlacement} placement
+             * @property {?Object} userData - Arbitrary subscriber-defined object.
+             */
+            this.raiseEvent( 'update-overlay', {
+                element: element,
+                location: location,
+                placement: placement
+            });
+        }
+        return this;
+    },
+
+    /**
+     * Removes an overlay identified by the reference element or element id
+     * and schedules an update.
+     * @method
+     * @param {Element|String} element - A reference to the element or an
+     *      element id which represent the ovelay content to be removed.
+     * @return {OpenSeadragon.Viewer} Chainable.
+     * @fires OpenSeadragon.Viewer.event:remove-overlay
+     */
+    removeOverlay: function( element ) {
+        var i;
+
+        element = $.getElement( element );
+        i = getOverlayIndex( this.currentOverlays, element );
+
+        if ( i >= 0 ) {
+            this.currentOverlays[ i ].destroy();
+            this.currentOverlays.splice( i, 1 );
+            THIS[ this.hash ].forceRedraw = true;
+            /**
+             * Raised when an overlay is removed from the viewer
+             * (see {@link OpenSeadragon.Viewer#removeOverlay}).
+             *
+             * @event remove-overlay
+             * @memberof OpenSeadragon.Viewer
+             * @type {object}
+             * @property {OpenSeadragon.Viewer} eventSource - A reference to the
+             * Viewer which raised the event.
+             * @property {Element} element - The overlay element.
+             * @property {?Object} userData - Arbitrary subscriber-defined object.
+             */
+            this.raiseEvent( 'remove-overlay', {
+                element: element
+            });
+        }
+        return this;
+    },
+
+    /**
+     * Removes all currently configured Overlays from this Viewer and schedules
+     * an update.
+     * @method
+     * @return {OpenSeadragon.Viewer} Chainable.
+     * @fires OpenSeadragon.Viewer.event:clear-overlay
+     */
+    clearOverlays: function() {
+        while ( this.currentOverlays.length > 0 ) {
+            this.currentOverlays.pop().destroy();
+        }
+        THIS[ this.hash ].forceRedraw = true;
+        /**
+         * Raised when all overlays are removed from the viewer (see {@link OpenSeadragon.Drawer#clearOverlays}).
+         *
+         * @event clear-overlay
+         * @memberof OpenSeadragon.Viewer
+         * @type {object}
+         * @property {OpenSeadragon.Viewer} eventSource - A reference to the Viewer which raised the event.
+         * @property {?Object} userData - Arbitrary subscriber-defined object.
+         */
+        this.raiseEvent( 'clear-overlay', {} );
+        return this;
+    },
+
+    /**
+     * Updates the sequence buttons.
+     * @function OpenSeadragon.Viewer.prototype._updateSequenceButtons
+     * @private
+     * @param {Number} Sequence Value
+     */
+    _updateSequenceButtons: function( page ) {
+
+            if ( this.nextButton ) {
+                if( ( this.tileSources.length - 1 ) === page ) {
                     //Disable next button
-                    if(!this.navPrevNextWrap){
+                    if ( !this.navPrevNextWrap ) {
                         this.nextButton.disable();
                     }
                 } else {
                     this.nextButton.enable();
                 }
             }
-            if( this.previousButton ){
-                if( page > 0 ){
+            if ( this.previousButton ) {
+                if ( page > 0 ) {
                     //Enable previous button
                     this.previousButton.enable();
                 } else {
-                    if(!this.navPrevNextWrap){
+                    if ( !this.navPrevNextWrap ) {
                         this.previousButton.disable();
                     }
                 }
             }
-
-            this.open( this.tileSources[ page ] );
-        }
-
-        if( $.isFunction( this.onPageChange ) ){
-            this.onPageChange({
-                page: page,
-                viewer: this
-            });
-        }
-        if( this.referenceStrip ){
-            this.referenceStrip.setFocus( page );
-        }
-        return this;
-    },
-
+      },
+      
     /**
      * Display a message in the viewport
-     * @function
+     * @function OpenSeadragon.Viewer.prototype._showMessage
      * @private
      * @param {String} text message
      */
@@ -1095,7 +1796,7 @@ $.extend( $.Viewer.prototype, $.EventHandler.prototype, $.ControlDock.prototype,
 
     /**
      * Hide any currently displayed viewport message
-     * @function
+     * @function OpenSeadragon.Viewer.prototype._hideMessage
      * @private
      */
     _hideMessage: function () {
@@ -1104,24 +1805,114 @@ $.extend( $.Viewer.prototype, $.EventHandler.prototype, $.ControlDock.prototype,
             div.parentNode.removeChild(div);
             delete this.messageDiv;
         }
+    },
+
+    /**
+     * Gets this viewer's gesture settings for the given pointer device type.
+     * @method
+     * @param {String} type - The pointer device type to get the gesture settings for ("mouse", "touch", "pen", etc.).
+     * @return {OpenSeadragon.GestureSettings}
+     */
+    gestureSettingsByDeviceType: function ( type ) {
+        switch ( type ) {
+            case 'mouse':
+                return this.gestureSettingsMouse;
+            case 'touch':
+                return this.gestureSettingsTouch;
+            case 'pen':
+                return this.gestureSettingsPen;
+            default:
+                return this.gestureSettingsUnknown;
+        }
     }
+
 });
+
+
+/**
+ * _getSafeElemSize is like getElementSize(), but refuses to return 0 for x or y,
+ * which was causing some calling operations in updateOnce and openTileSource to
+ * return NaN.
+ * @returns {Point}
+ * @private
+ */
+function _getSafeElemSize (oElement) {
+    oElement = $.getElement( oElement );
+
+    return new $.Point(
+        (oElement.clientWidth === 0 ? 1 : oElement.clientWidth),
+        (oElement.clientHeight === 0 ? 1 : oElement.clientHeight)
+    );
+}
+
+/**
+ * @function
+ * @private
+ */
+function getTileSourceImplementation( viewer, tileSource, successCallback,
+    failCallback ) {
+    var _this = viewer;
+
+    //allow plain xml strings or json strings to be parsed here
+    if ( $.type( tileSource ) == 'string' ) {
+        if ( tileSource.match( /\s*<.*/ ) ) {
+            tileSource = $.parseXml( tileSource );
+        } else if ( tileSource.match( /\s*[\{\[].*/ ) ) {
+            /*jshint evil:true*/
+            tileSource = eval( '(' + tileSource + ')' );
+        }
+    }
+
+    setTimeout( function() {
+        if ( $.type( tileSource ) == 'string' ) {
+            //If its still a string it means it must be a url at this point
+            tileSource = new $.TileSource( tileSource, function( event ) {
+                successCallback( event.tileSource );
+            });
+            tileSource.addHandler( 'open-failed', function( event ) {
+                failCallback( event );
+            } );
+
+        } else if ( $.isPlainObject( tileSource ) || tileSource.nodeType ) {
+            if ( $.isFunction( tileSource.getTileUrl ) ) {
+                //Custom tile source
+                var customTileSource = new $.TileSource( tileSource );
+                customTileSource.getTileUrl = tileSource.getTileUrl;
+                successCallback( customTileSource );
+            } else {
+                //inline configuration
+                var $TileSource = $.TileSource.determineType( _this, tileSource );
+                if ( !$TileSource ) {
+                    failCallback( {
+                        message: "Unable to load TileSource",
+                        source: tileSource
+                    });
+                    return;
+                }
+                var options = $TileSource.prototype.configure.apply( _this, [ tileSource ] );
+                var readySource = new $TileSource( options );
+                successCallback( readySource );
+            }
+        } else {
+            //can assume it's already a tile source implementation
+            successCallback( tileSource );
+        }
+    }, 1 );
+}
 
 /**
  * @function
  * @private
  */
 function openTileSource( viewer, source ) {
-    var _this = viewer,
-        overlay,
-        i;
+    var i,
+        _this = viewer;
 
     if ( _this.source ) {
         _this.close( );
     }
 
-    _this.canvas.innerHTML = "";
-    THIS[ _this.hash ].prevContainerSize = $.getElementSize( _this.container );
+    THIS[ _this.hash ].prevContainerSize = _getSafeElemSize( _this.container );
 
 
     if( _this.collectionMode ){
@@ -1142,12 +1933,14 @@ function openTileSource( viewer, source ) {
             showNavigator:          false,
             minZoomImageRatio:      1,
             maxZoomPixelRatio:      1,
-            viewer:                 _this //,
+            viewer:                 _this,
+            degrees:                 _this.degrees //,
             //TODO: figure out how to support these in a way that makes sense
             //minZoomLevel:           this.minZoomLevel,
-            //maxZoomLevel:           this.maxZoomLevel
+            //maxZoomLevel:           this.maxZoomLevel,
+            //homeFillsViewer:        this.homeFillsViewer
         });
-    }else{
+    } else {
         if( source ){
             _this.source = source;
         }
@@ -1164,7 +1957,10 @@ function openTileSource( viewer, source ) {
             defaultZoomLevel:   _this.defaultZoomLevel,
             minZoomLevel:       _this.minZoomLevel,
             maxZoomLevel:       _this.maxZoomLevel,
-            viewer:             _this
+            viewer:             _this,
+            degrees:            _this.degrees,
+            navigatorRotate:    _this.navigatorRotate,
+            homeFillsViewer:    _this.homeFillsViewer
         });
     }
 
@@ -1178,8 +1974,8 @@ function openTileSource( viewer, source ) {
         viewer:             _this,
         source:             _this.source,
         viewport:           _this.viewport,
-        element:            _this.canvas,
-        overlays:           [].concat( _this.overlays ).concat( _this.source.overlays ),
+        element:            _this.drawersContainer,
+        opacity:            _this.opacity,
         maxImageCacheCount: _this.maxImageCacheCount,
         imageLoaderLimit:   _this.imageLoaderLimit,
         minZoomImageRatio:  _this.minZoomImageRatio,
@@ -1191,8 +1987,25 @@ function openTileSource( viewer, source ) {
         minPixelRatio:      _this.collectionMode ? 0 : _this.minPixelRatio,
         timeout:            _this.timeout,
         debugMode:          _this.debugMode,
-        debugGridColor:     _this.debugGridColor
+        debugGridColor:     _this.debugGridColor,
+        crossOriginPolicy:  _this.crossOriginPolicy
     });
+    _this.drawers = [_this.drawer];
+
+    // Now that we have a drawer, see if it supports rotate. If not we need to remove the rotate buttons
+    if (!_this.drawer.canRotate()) {
+        // Disable/remove the rotate left/right buttons since they aren't supported
+        if (_this.rotateLeft) {
+            i = _this.buttons.buttons.indexOf(_this.rotateLeft);
+            _this.buttons.buttons.splice(i, 1);
+            _this.buttons.element.removeChild(_this.rotateLeft.element);
+        }
+        if (_this.rotateRight) {
+            i = _this.buttons.buttons.indexOf(_this.rotateRight);
+            _this.buttons.buttons.splice(i, 1);
+            _this.buttons.element.removeChild(_this.rotateRight.element);
+        }
+    }
 
     //Instantiate a navigator if configured
     if ( _this.showNavigator  && !_this.collectionMode ){
@@ -1202,16 +2015,20 @@ function openTileSource( viewer, source ) {
             _this.navigator.open( source );
         } else {
             _this.navigator = new $.Navigator({
-                id:          _this.navigatorId,
-                position:    _this.navigatorPosition,
-                sizeRatio:   _this.navigatorSizeRatio,
-                height:      _this.navigatorHeight,
-                width:       _this.navigatorWidth,
-                tileSources: source,
-                tileHost:    _this.tileHost,
-                prefixUrl:   _this.prefixUrl,
-                overlays:    _this.overlays,
-                viewer:      _this
+                id:                _this.navigatorId,
+                position:          _this.navigatorPosition,
+                sizeRatio:         _this.navigatorSizeRatio,
+                maintainSizeRatio: _this.navigatorMaintainSizeRatio,
+                top:               _this.navigatorTop,
+                left:              _this.navigatorLeft,
+                width:             _this.navigatorWidth,
+                height:            _this.navigatorHeight,
+                autoResize:        _this.navigatorAutoResize,
+                tileSources:       source,
+                tileHost:          _this.tileHost,
+                prefixUrl:         _this.prefixUrl,
+                viewer:            _this,
+                navigatorRotate:   _this.navigatorRotate
             });
         }
     }
@@ -1228,7 +2045,6 @@ function openTileSource( viewer, source ) {
             tileSources: _this.tileSources,
             tileHost:    _this.tileHost,
             prefixUrl:   _this.prefixUrl,
-            overlays:    _this.overlays,
             viewer:      _this
         });
     }
@@ -1239,47 +2055,127 @@ function openTileSource( viewer, source ) {
     THIS[ _this.hash ].forceRedraw = true;
     _this._updateRequestId = scheduleUpdate( _this, updateMulti );
 
-    //Assuming you had programatically created a bunch of overlays
-    //and added them via configuration
-    for ( i = 0; i < _this.overlayControls.length; i++ ) {
-
-        overlay = _this.overlayControls[ i ];
-
-        if ( overlay.point ) {
-
-            _this.drawer.addOverlay(
-                overlay.id,
-                new $.Point(
-                    overlay.point.X,
-                    overlay.point.Y
-                ),
-                $.OverlayPlacement.TOP_LEFT
-            );
-
-        } else {
-
-            _this.drawer.addOverlay(
-                overlay.id,
-                new $.Rect(
-                    overlay.rect.Point.X,
-                    overlay.rect.Point.Y,
-                    overlay.rect.Width,
-                    overlay.rect.Height
-                ),
-                overlay.placement
-            );
-
-        }
-    }
     VIEWERS[ _this.hash ] = _this;
 
-    _this.raiseEvent( 'open', { source: source, viewer: _this } );
+    loadOverlays( _this );
+
+    /**
+     * Raised when the viewer has opened and loaded one or more TileSources.
+     *
+     * @event open
+     * @memberof OpenSeadragon.Viewer
+     * @type {object}
+     * @property {OpenSeadragon.Viewer} eventSource - A reference to the Viewer which raised the event.
+     * @property {OpenSeadragon.TileSource} source
+     * @property {?Object} userData - Arbitrary subscriber-defined object.
+     */
+    _this.raiseEvent( 'open', { source: source } );
 
     return _this;
 }
 
+function loadOverlays( _this ) {
+    _this.currentOverlays = [];
+    for ( var i = 0; i < _this.overlays.length; i++ ) {
+        _this.currentOverlays[ i ] = getOverlayObject( _this, _this.overlays[ i ] );
+    }
+    for ( var j = 0; j < _this.source.overlays.length; j++ ) {
+        _this.currentOverlays[ i + j ] =
+            getOverlayObject( _this, _this.source.overlays[ j ] );
+    }
+}
 
+function getOverlayObject( viewer, overlay ) {
+    if ( overlay instanceof $.Overlay ) {
+        return overlay;
+    }
 
+    var element = null;
+    if ( overlay.element ) {
+        element = $.getElement( overlay.element );
+    } else {
+        var id = overlay.id ?
+            overlay.id :
+            "openseadragon-overlay-" + Math.floor( Math.random() * 10000000 );
+
+        element = $.getElement( overlay.id );
+        if ( !element ) {
+            element         = document.createElement( "a" );
+            element.href    = "#/overlay/" + id;
+        }
+        element.id = id;
+        $.addClass( element, overlay.className ?
+            overlay.className :
+            "openseadragon-overlay"
+        );
+    }
+
+    var location = overlay.location;
+    if ( !location ) {
+        if ( overlay.width && overlay.height ) {
+            location = overlay.px !== undefined ?
+                viewer.viewport.imageToViewportRectangle( new $.Rect(
+                    overlay.px,
+                    overlay.py,
+                    overlay.width,
+                    overlay.height
+                ) ) :
+                new $.Rect(
+                    overlay.x,
+                    overlay.y,
+                    overlay.width,
+                    overlay.height
+                );
+        } else {
+            location = overlay.px !== undefined ?
+                viewer.viewport.imageToViewportCoordinates( new $.Point(
+                    overlay.px,
+                    overlay.py
+                ) ) :
+                new $.Point(
+                    overlay.x,
+                    overlay.y
+                );
+        }
+    }
+
+    var placement = overlay.placement;
+    if ( placement && ( $.type( placement ) === "string" ) ) {
+        placement = $.OverlayPlacement[ overlay.placement.toUpperCase() ];
+    }
+
+    return new $.Overlay({
+        element: element,
+        location: location,
+        placement: placement,
+        onDraw: overlay.onDraw,
+        checkResize: overlay.checkResize
+    });
+}
+
+/**
+ * @private
+ * @inner
+ * Determines the index of the given overlay in the given overlays array.
+ */
+function getOverlayIndex( overlays, element ) {
+    var i;
+    for ( i = overlays.length - 1; i >= 0; i-- ) {
+        if ( overlays[ i ].element === element ) {
+            return i;
+        }
+    }
+
+    return -1;
+}
+
+function drawOverlays( viewport, overlays, container ) {
+    var i,
+        length = overlays.length;
+    for ( i = 0; i < length; i++ ) {
+        overlays[ i ].drawHTML( container, viewport );
+    }
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 // Schedulers provide the general engine for animation
@@ -1366,121 +2262,384 @@ function onBlur(){
 
 }
 
-function onCanvasClick( tracker, position, quick, shift ) {
-    var zoomPerClick,
-        factor;
-    if ( this.viewport && quick ) {    // ignore clicks where mouse moved
-        zoomPerClick = this.zoomPerClick;
-        factor = shift ? 1.0 / zoomPerClick : zoomPerClick;
-        this.viewport.zoomBy(
-            factor,
-            this.viewport.pointFromPixel( position, true )
-        );
-        this.viewport.applyConstraints();
+function onCanvasClick( event ) {
+    var gestureSettings;
+
+    if ( !event.preventDefaultAction && this.viewport && event.quick ) {
+        gestureSettings = this.gestureSettingsByDeviceType( event.pointerType );
+        if ( gestureSettings.clickToZoom ) {
+            this.viewport.zoomBy(
+                event.shift ? 1.0 / this.zoomPerClick : this.zoomPerClick,
+                this.viewport.pointFromPixel( event.position, true )
+            );
+            this.viewport.applyConstraints();
+        }
     }
+    /**
+     * Raised when a mouse press/release or touch/remove occurs on the {@link OpenSeadragon.Viewer#canvas} element.
+     *
+     * @event canvas-click
+     * @memberof OpenSeadragon.Viewer
+     * @type {object}
+     * @property {OpenSeadragon.Viewer} eventSource - A reference to the Viewer which raised this event.
+     * @property {OpenSeadragon.MouseTracker} tracker - A reference to the MouseTracker which originated this event.
+     * @property {OpenSeadragon.Point} position - The position of the event relative to the tracked element.
+     * @property {Boolean} quick - True only if the clickDistThreshold and clickTimeThreshold are both passed. Useful for differentiating between clicks and drags.
+     * @property {Boolean} shift - True if the shift key was pressed during this event.
+     * @property {Object} originalEvent - The original DOM event.
+     * @property {?Object} userData - Arbitrary subscriber-defined object.
+     */
     this.raiseEvent( 'canvas-click', {
-        tracker: tracker,
-        position: position,
-        quick: quick,
-        shift: shift
+        tracker: event.eventSource,
+        position: event.position,
+        quick: event.quick,
+        shift: event.shift,
+        originalEvent: event.originalEvent
     });
 }
 
-function onCanvasDrag( tracker, position, delta, shift ) {
-    if ( this.viewport ) {
+function onCanvasDblClick( event ) {
+    var gestureSettings;
+
+    if ( !event.preventDefaultAction && this.viewport ) {
+        gestureSettings = this.gestureSettingsByDeviceType( event.pointerType );
+        if ( gestureSettings.dblClickToZoom ) {
+            this.viewport.zoomBy(
+                event.shift ? 1.0 / this.zoomPerClick : this.zoomPerClick,
+                this.viewport.pointFromPixel( event.position, true )
+            );
+            this.viewport.applyConstraints();
+        }
+    }
+    /**
+     * Raised when a double mouse press/release or touch/remove occurs on the {@link OpenSeadragon.Viewer#canvas} element.
+     *
+     * @event canvas-double-click
+     * @memberof OpenSeadragon.Viewer
+     * @type {object}
+     * @property {OpenSeadragon.Viewer} eventSource - A reference to the Viewer which raised this event.
+     * @property {OpenSeadragon.MouseTracker} tracker - A reference to the MouseTracker which originated this event.
+     * @property {OpenSeadragon.Point} position - The position of the event relative to the tracked element.
+     * @property {Boolean} shift - True if the shift key was pressed during this event.
+     * @property {Object} originalEvent - The original DOM event.
+     * @property {?Object} userData - Arbitrary subscriber-defined object.
+     */
+    this.raiseEvent( 'canvas-double-click', {
+        tracker: event.eventSource,
+        position: event.position,
+        shift: event.shift,
+        originalEvent: event.originalEvent
+    });
+}
+
+function onCanvasDrag( event ) {
+    var gestureSettings;
+
+    if ( !event.preventDefaultAction && this.viewport ) {
+        gestureSettings = this.gestureSettingsByDeviceType( event.pointerType );
         if( !this.panHorizontal ){
-            delta.x = 0;
+            event.delta.x = 0;
         }
         if( !this.panVertical ){
-            delta.y = 0;
+            event.delta.y = 0;
         }
-        this.viewport.panBy(
-            this.viewport.deltaPointsFromPixels(
-                delta.negate()
-            )
-        );
+        this.viewport.panBy( this.viewport.deltaPointsFromPixels( event.delta.negate() ), gestureSettings.flickEnabled );
         if( this.constrainDuringPan ){
             this.viewport.applyConstraints();
         }
     }
-    this.raiseEvent( 'canvas-click', {
-        tracker: tracker,
-        position: position,
-        delta: delta,
-        shift: shift
+    /**
+     * Raised when a mouse or touch drag operation occurs on the {@link OpenSeadragon.Viewer#canvas} element.
+     *
+     * @event canvas-drag
+     * @memberof OpenSeadragon.Viewer
+     * @type {object}
+     * @property {OpenSeadragon.Viewer} eventSource - A reference to the Viewer which raised this event.
+     * @property {OpenSeadragon.MouseTracker} tracker - A reference to the MouseTracker which originated this event.
+     * @property {OpenSeadragon.Point} position - The position of the event relative to the tracked element.
+     * @property {OpenSeadragon.Point} delta - The x,y components of the difference between start drag and end drag.
+     * @property {Number} speed - Current computed speed, in pixels per second.
+     * @property {Number} direction - Current computed direction, expressed as an angle counterclockwise relative to the positive X axis (-pi to pi, in radians). Only valid if speed > 0.
+     * @property {Boolean} shift - True if the shift key was pressed during this event.
+     * @property {Object} originalEvent - The original DOM event.
+     * @property {?Object} userData - Arbitrary subscriber-defined object.
+     */
+    this.raiseEvent( 'canvas-drag', {
+        tracker: event.eventSource,
+        position: event.position,
+        delta: event.delta,
+        speed: event.speed,
+        direction: event.direction,
+        shift: event.shift,
+        originalEvent: event.originalEvent
     });
 }
 
-function onCanvasRelease( tracker, position, insideElementPress, insideElementRelease ) {
-    if ( insideElementPress && this.viewport ) {
+function onCanvasDragEnd( event ) {
+    var gestureSettings;
+
+    if ( !event.preventDefaultAction && this.viewport ) {
+        gestureSettings = this.gestureSettingsByDeviceType( event.pointerType );
+        if ( gestureSettings.flickEnabled && event.speed >= gestureSettings.flickMinSpeed ) {
+            var amplitudeX = gestureSettings.flickMomentum * ( event.speed * Math.cos( event.direction - (Math.PI / 180 * this.viewport.degrees) ) ),
+                amplitudeY = gestureSettings.flickMomentum * ( event.speed * Math.sin( event.direction - (Math.PI / 180 * this.viewport.degrees) ) ),
+                center = this.viewport.pixelFromPoint( this.viewport.getCenter( true ) ),
+                target = this.viewport.pointFromPixel( new $.Point( center.x - amplitudeX, center.y - amplitudeY ) );
+            if( !this.panHorizontal ) {
+                target.x = center.x;
+            }
+            if( !this.panVertical ) {
+                target.y = center.y;
+            }
+            this.viewport.panTo( target, false );
+        }
         this.viewport.applyConstraints();
     }
+    /**
+     * Raised when a mouse or touch drag operation ends on the {@link OpenSeadragon.Viewer#canvas} element.
+     *
+     * @event canvas-drag-end
+     * @memberof OpenSeadragon.Viewer
+     * @type {object}
+     * @property {OpenSeadragon.Viewer} eventSource - A reference to the Viewer which raised this event.
+     * @property {OpenSeadragon.MouseTracker} tracker - A reference to the MouseTracker which originated this event.
+     * @property {OpenSeadragon.Point} position - The position of the event relative to the tracked element.
+     * @property {Number} speed - Speed at the end of a drag gesture, in pixels per second.
+     * @property {Number} direction - Direction at the end of a drag gesture, expressed as an angle counterclockwise relative to the positive X axis (-pi to pi, in radians). Only valid if speed > 0.
+     * @property {Boolean} shift - True if the shift key was pressed during this event.
+     * @property {Object} originalEvent - The original DOM event.
+     * @property {?Object} userData - Arbitrary subscriber-defined object.
+     */
+    this.raiseEvent( 'canvas-drag-end', {
+        tracker: event.eventSource,
+        position: event.position,
+        speed: event.speed,
+        direction: event.direction,
+        shift: event.shift,
+        originalEvent: event.originalEvent
+    });
+}
+
+function onCanvasRelease( event ) {
+    /**
+     * Raised when the mouse button is released or touch ends on the {@link OpenSeadragon.Viewer#canvas} element.
+     *
+     * @event canvas-release
+     * @memberof OpenSeadragon.Viewer
+     * @type {object}
+     * @property {OpenSeadragon.Viewer} eventSource - A reference to the Viewer which raised this event.
+     * @property {OpenSeadragon.MouseTracker} tracker - A reference to the MouseTracker which originated this event.
+     * @property {OpenSeadragon.Point} position - The position of the event relative to the tracked element.
+     * @property {Boolean} insideElementPressed - True if the left mouse button is currently being pressed and was initiated inside the tracked element, otherwise false.
+     * @property {Boolean} insideElementReleased - True if the cursor still inside the tracked element when the button was released.
+     * @property {Object} originalEvent - The original DOM event.
+     * @property {?Object} userData - Arbitrary subscriber-defined object.
+     */
     this.raiseEvent( 'canvas-release', {
-        tracker: tracker,
-        position: position,
-        insideElementPress: insideElementPress,
-        insideElementRelease: insideElementRelease
+        tracker: event.eventSource,
+        position: event.position,
+        insideElementPressed: event.insideElementPressed,
+        insideElementReleased: event.insideElementReleased,
+        originalEvent: event.originalEvent
     });
 }
 
-function onCanvasScroll( tracker, position, scroll, shift ) {
-    var factor;
-    if ( this.viewport ) {
-        factor = Math.pow( this.zoomPerScroll, scroll );
-        this.viewport.zoomBy(
-            factor,
-            this.viewport.pointFromPixel( position, true )
-        );
-        this.viewport.applyConstraints();
+function onCanvasPinch( event ) {
+    var gestureSettings,
+        centerPt,
+        lastCenterPt,
+        panByPt;
+
+    if ( !event.preventDefaultAction && this.viewport ) {
+        gestureSettings = this.gestureSettingsByDeviceType( event.pointerType );
+        if ( gestureSettings.pinchToZoom ) {
+            centerPt = this.viewport.pointFromPixel( event.center, true );
+            lastCenterPt = this.viewport.pointFromPixel( event.lastCenter, true );
+            panByPt = lastCenterPt.minus( centerPt );
+            if( !this.panHorizontal ) {
+                panByPt.x = 0;
+            }
+            if( !this.panVertical ) {
+                panByPt.y = 0;
+            }
+            this.viewport.zoomBy( event.distance / event.lastDistance, centerPt, true );
+            this.viewport.panBy( panByPt, true );
+            this.viewport.applyConstraints();
+        }
+        if ( gestureSettings.pinchRotate ) {
+            // Pinch rotate
+            var angle1 = Math.atan2(event.gesturePoints[0].currentPos.y - event.gesturePoints[1].currentPos.y,
+                event.gesturePoints[0].currentPos.x - event.gesturePoints[1].currentPos.x);
+            var angle2 = Math.atan2(event.gesturePoints[0].lastPos.y - event.gesturePoints[1].lastPos.y,
+                event.gesturePoints[0].lastPos.x - event.gesturePoints[1].lastPos.x);
+            this.viewport.setRotation(this.viewport.getRotation() + ((angle1 - angle2) * (180 / Math.PI)));
+        }
     }
-    this.raiseEvent( 'canvas-scroll', {
-        tracker: tracker,
-        position: position,
-        scroll: scroll,
-        shift: shift
+    /**
+     * Raised when a pinch event occurs on the {@link OpenSeadragon.Viewer#canvas} element.
+     *
+     * @event canvas-pinch
+     * @memberof OpenSeadragon.Viewer
+     * @type {object}
+     * @property {OpenSeadragon.Viewer} eventSource - A reference to the Viewer which raised this event.
+     * @property {OpenSeadragon.MouseTracker} tracker - A reference to the MouseTracker which originated this event.
+     * @property {Array.<OpenSeadragon.MouseTracker.GesturePoint>} gesturePoints - Gesture points associated with the gesture. Velocity data can be found here.
+     * @property {OpenSeadragon.Point} lastCenter - The previous center point of the two pinch contact points relative to the tracked element.
+     * @property {OpenSeadragon.Point} center - The center point of the two pinch contact points relative to the tracked element.
+     * @property {Number} lastDistance - The previous distance between the two pinch contact points in CSS pixels.
+     * @property {Number} distance - The distance between the two pinch contact points in CSS pixels.
+     * @property {Boolean} shift - True if the shift key was pressed during this event.
+     * @property {Object} originalEvent - The original DOM event.
+     * @property {?Object} userData - Arbitrary subscriber-defined object.
+     */
+    this.raiseEvent('canvas-pinch', {
+        tracker: event.eventSource,
+        gesturePoints: event.gesturePoints,
+        lastCenter: event.lastCenter,
+        center: event.center,
+        lastDistance: event.lastDistance,
+        distance: event.distance,
+        shift: event.shift,
+        originalEvent: event.originalEvent
     });
     //cancels event
     return false;
 }
 
-function onContainerExit( tracker, position, buttonDownElement, buttonDownAny ) {
-    if ( !buttonDownElement ) {
+function onCanvasScroll( event ) {
+    var gestureSettings,
+        factor;
+
+    if ( !event.preventDefaultAction && this.viewport ) {
+        gestureSettings = this.gestureSettingsByDeviceType( event.pointerType );
+        if ( gestureSettings.scrollToZoom ) {
+            factor = Math.pow( this.zoomPerScroll, event.scroll );
+            this.viewport.zoomBy(
+                factor,
+                this.viewport.pointFromPixel( event.position, true )
+            );
+            this.viewport.applyConstraints();
+        }
+    }
+    /**
+     * Raised when a scroll event occurs on the {@link OpenSeadragon.Viewer#canvas} element (mouse wheel).
+     *
+     * @event canvas-scroll
+     * @memberof OpenSeadragon.Viewer
+     * @type {object}
+     * @property {OpenSeadragon.Viewer} eventSource - A reference to the Viewer which raised this event.
+     * @property {OpenSeadragon.MouseTracker} tracker - A reference to the MouseTracker which originated this event.
+     * @property {OpenSeadragon.Point} position - The position of the event relative to the tracked element.
+     * @property {Number} scroll - The scroll delta for the event.
+     * @property {Boolean} shift - True if the shift key was pressed during this event.
+     * @property {Object} originalEvent - The original DOM event.
+     * @property {?Object} userData - Arbitrary subscriber-defined object.
+     */
+    this.raiseEvent( 'canvas-scroll', {
+        tracker: event.eventSource,
+        position: event.position,
+        scroll: event.scroll,
+        shift: event.shift,
+        originalEvent: event.originalEvent
+    });
+    //cancels event
+    return false;
+}
+
+function onContainerExit( event ) {
+    if ( !event.insideElementPressed ) {
         THIS[ this.hash ].mouseInside = false;
         if ( !THIS[ this.hash ].animating ) {
             beginControlsAutoHide( this );
         }
     }
+    /**
+     * Raised when the cursor leaves the {@link OpenSeadragon.Viewer#container} element.
+     *
+     * @event container-exit
+     * @memberof OpenSeadragon.Viewer
+     * @type {object}
+     * @property {OpenSeadragon.Viewer} eventSource - A reference to the Viewer which raised this event.
+     * @property {OpenSeadragon.MouseTracker} tracker - A reference to the MouseTracker which originated this event.
+     * @property {OpenSeadragon.Point} position - The position of the event relative to the tracked element.
+     * @property {Number} buttons - Current buttons pressed. A combination of bit flags 0: none, 1: primary (or touch contact), 2: secondary, 4: aux (often middle), 8: X1 (often back), 16: X2 (often forward), 32: pen eraser.
+     * @property {Boolean} insideElementPressed - True if the left mouse button is currently being pressed and was initiated inside the tracked element, otherwise false.
+     * @property {Boolean} buttonDownAny - Was the button down anywhere in the screen during the event. <span style="color:red;">Deprecated. Use buttons instead.</span>
+     * @property {Object} originalEvent - The original DOM event.
+     * @property {?Object} userData - Arbitrary subscriber-defined object.
+     */
     this.raiseEvent( 'container-exit', {
-        tracker: tracker,
-        position: position,
-        buttonDownElement: buttonDownElement,
-        buttonDownAny: buttonDownAny
+        tracker: event.eventSource,
+        position: event.position,
+        buttons: event.buttons,
+        insideElementPressed: event.insideElementPressed,
+        buttonDownAny: event.buttonDownAny,
+        originalEvent: event.originalEvent
     });
 }
 
-function onContainerRelease( tracker, position, insideElementPress, insideElementRelease ) {
-    if ( !insideElementRelease ) {
+function onContainerPress( event ) {
+    if ( event.pointerType === 'touch' && !$.MouseTracker.haveTouchEnter ) {
+        THIS[ this.hash ].mouseInside = true;
+        abortControlsAutoHide( this );
+    }
+}
+
+function onContainerRelease( event ) {
+    if ( !event.insideElementReleased || ( event.pointerType === 'touch' && !$.MouseTracker.haveTouchEnter ) ) {
         THIS[ this.hash ].mouseInside = false;
         if ( !THIS[ this.hash ].animating ) {
             beginControlsAutoHide( this );
         }
     }
+    /**
+     * Raised when the mouse button is released or touch ends on the {@link OpenSeadragon.Viewer#container} element.
+     *
+     * @event container-release
+     * @memberof OpenSeadragon.Viewer
+     * @type {object}
+     * @property {OpenSeadragon.Viewer} eventSource - A reference to the Viewer which raised this event.
+     * @property {OpenSeadragon.MouseTracker} tracker - A reference to the MouseTracker which originated this event.
+     * @property {OpenSeadragon.Point} position - The position of the event relative to the tracked element.
+     * @property {Boolean} insideElementPressed - True if the left mouse button is currently being pressed and was initiated inside the tracked element, otherwise false.
+     * @property {Boolean} insideElementReleased - True if the cursor still inside the tracked element when the button was released.
+     * @property {Object} originalEvent - The original DOM event.
+     * @property {?Object} userData - Arbitrary subscriber-defined object.
+     */
     this.raiseEvent( 'container-release', {
-        tracker: tracker,
-        position: position,
-        insideElementPress: insideElementPress,
-        insideElementRelease: insideElementRelease
+        tracker: event.eventSource,
+        position: event.position,
+        insideElementPressed: event.insideElementPressed,
+        insideElementReleased: event.insideElementReleased,
+        originalEvent: event.originalEvent
     });
 }
 
-function onContainerEnter( tracker, position, buttonDownElement, buttonDownAny ) {
+function onContainerEnter( event ) {
     THIS[ this.hash ].mouseInside = true;
     abortControlsAutoHide( this );
+    /**
+     * Raised when the cursor enters the {@link OpenSeadragon.Viewer#container} element.
+     *
+     * @event container-enter
+     * @memberof OpenSeadragon.Viewer
+     * @type {object}
+     * @property {OpenSeadragon.Viewer} eventSource - A reference to the Viewer which raised this event.
+     * @property {OpenSeadragon.MouseTracker} tracker - A reference to the MouseTracker which originated this event.
+     * @property {OpenSeadragon.Point} position - The position of the event relative to the tracked element.
+     * @property {Number} buttons - Current buttons pressed. A combination of bit flags 0: none, 1: primary (or touch contact), 2: secondary, 4: aux (often middle), 8: X1 (often back), 16: X2 (often forward), 32: pen eraser.
+     * @property {Boolean} insideElementPressed - True if the left mouse button is currently being pressed and was initiated inside the tracked element, otherwise false.
+     * @property {Boolean} buttonDownAny - Was the button down anywhere in the screen during the event. <span style="color:red;">Deprecated. Use buttons instead.</span>
+     * @property {Object} originalEvent - The original DOM event.
+     * @property {?Object} userData - Arbitrary subscriber-defined object.
+     */
     this.raiseEvent( 'container-enter', {
-        tracker: tracker,
-        position: position,
-        buttonDownElement: buttonDownElement,
-        buttonDownAny: buttonDownAny
+        tracker: event.eventSource,
+        position: event.position,
+        buttons: event.buttons,
+        insideElementPressed: event.insideElementPressed,
+        buttonDownAny: event.buttonDownAny,
+        originalEvent: event.originalEvent
     });
 }
 
@@ -1514,11 +2673,16 @@ function updateOnce( viewer ) {
 
     //viewer.profiler.beginUpdate();
 
-    containerSize = $.getElementSize( viewer.container );
-    if ( !containerSize.equals( THIS[ viewer.hash ].prevContainerSize ) ) {
-        // maintain image position
-        viewer.viewport.resize( containerSize, true );
-        THIS[ viewer.hash ].prevContainerSize = containerSize;
+    if ( viewer.autoResize ) {
+        containerSize = _getSafeElemSize( viewer.container );
+        if ( !containerSize.equals( THIS[ viewer.hash ].prevContainerSize ) ) {
+            // maintain image position
+            var oldBounds = viewer.viewport.getBounds();
+            var oldCenter = viewer.viewport.getCenter();
+            resizeViewportAndRecenter(viewer, containerSize, oldBounds, oldCenter);
+            THIS[ viewer.hash ].prevContainerSize = containerSize;
+            THIS[ viewer.hash ].forceRedraw = true;
+        }
     }
 
     animated = viewer.viewport.update();
@@ -1528,18 +2692,38 @@ function updateOnce( viewer ) {
     }
 
     if ( !THIS[ viewer.hash ].animating && animated ) {
-        viewer.raiseEvent( "animationstart" );
+        /**
+         * Raised when any spring animation starts (zoom, pan, etc.).
+         *
+         * @event animation-start
+         * @memberof OpenSeadragon.Viewer
+         * @type {object}
+         * @property {OpenSeadragon.Viewer} eventSource - A reference to the Viewer which raised this event.
+         * @property {?Object} userData - Arbitrary subscriber-defined object.
+         */
+        viewer.raiseEvent( "animation-start" );
         abortControlsAutoHide( viewer );
     }
 
     if ( animated ) {
-        viewer.drawer.update();
+        updateDrawers( viewer );
+        drawOverlays( viewer.viewport, viewer.currentOverlays, viewer.overlaysContainer );
         if( viewer.navigator ){
             viewer.navigator.update( viewer.viewport );
         }
+        /**
+         * Raised when any spring animation update occurs (zoom, pan, etc.).
+         *
+         * @event animation
+         * @memberof OpenSeadragon.Viewer
+         * @type {object}
+         * @property {OpenSeadragon.Viewer} eventSource - A reference to the Viewer which raised this event.
+         * @property {?Object} userData - Arbitrary subscriber-defined object.
+         */
         viewer.raiseEvent( "animation" );
-    } else if ( THIS[ viewer.hash ].forceRedraw || viewer.drawer.needsUpdate() ) {
-        viewer.drawer.update();
+    } else if ( THIS[ viewer.hash ].forceRedraw || drawersNeedUpdate( viewer ) ) {
+        updateDrawers( viewer );
+        drawOverlays( viewer.viewport, viewer.currentOverlays, viewer.overlaysContainer );
         if( viewer.navigator ){
             viewer.navigator.update( viewer.viewport );
         }
@@ -1547,7 +2731,16 @@ function updateOnce( viewer ) {
     }
 
     if ( THIS[ viewer.hash ].animating && !animated ) {
-        viewer.raiseEvent( "animationfinish" );
+        /**
+         * Raised when any spring animation ends (zoom, pan, etc.).
+         *
+         * @event animation-finish
+         * @memberof OpenSeadragon.Viewer
+         * @type {object}
+         * @property {OpenSeadragon.Viewer} eventSource - A reference to the Viewer which raised this event.
+         * @property {?Object} userData - Arbitrary subscriber-defined object.
+         */
+        viewer.raiseEvent( "animation-finish" );
 
         if ( !THIS[ viewer.hash ].mouseInside ) {
             beginControlsAutoHide( viewer );
@@ -1559,7 +2752,45 @@ function updateOnce( viewer ) {
     //viewer.profiler.endUpdate();
 }
 
+// This function resizes the viewport and recenters the image
+// as it was before resizing.
+// TODO: better adjust width and height. The new width and height
+// should depend on the image dimensions and on the dimensions
+// of the viewport before and after switching mode.
+function resizeViewportAndRecenter( viewer, containerSize, oldBounds, oldCenter ) {
+    var viewport = viewer.viewport;
 
+    viewport.resize( containerSize, true );
+
+    // We try to remove blanks as much as possible
+    var imageHeight = 1 / viewer.source.aspectRatio;
+    var newWidth = oldBounds.width <= 1 ? oldBounds.width : 1;
+    var newHeight = oldBounds.height <= imageHeight ?
+        oldBounds.height : imageHeight;
+
+    var newBounds = new $.Rect(
+        oldCenter.x - ( newWidth / 2.0 ),
+        oldCenter.y - ( newHeight / 2.0 ),
+        newWidth,
+        newHeight
+        );
+    viewport.fitBounds( newBounds, true );
+}
+
+function updateDrawers( viewer ) {
+    for (var i = 0; i < viewer.drawers.length; i++ ) {
+        viewer.drawers[i].update();
+    }
+}
+
+function drawersNeedUpdate( viewer ) {
+    for (var i = 0; i < viewer.drawers.length; i++ ) {
+        if (viewer.drawers[i].needsUpdate()) {
+            return true;
+        }
+    }
+    return false;
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 // Navigation Controls
@@ -1649,15 +2880,52 @@ function onHome() {
 }
 
 
-function onFullPage() {
-    this.setFullPage( !this.isFullPage() );
+function onFullScreen() {
+    if ( this.isFullPage() && !$.isFullScreen() ) {
+        // Is fullPage but not fullScreen
+        this.setFullPage( false );
+    } else {
+        this.setFullScreen( !this.isFullPage() );
+    }
     // correct for no mouseout event on change
-    if( this.buttons ){
+    if ( this.buttons ) {
         this.buttons.emulateExit();
     }
     this.fullPageButton.element.focus();
     if ( this.viewport ) {
         this.viewport.applyConstraints();
+    }
+}
+
+/**
+ * Note: The current rotation feature is limited to 90 degree turns.
+ */
+function onRotateLeft() {
+    if ( this.viewport ) {
+        var currRotation = this.viewport.getRotation();
+        if (currRotation === 0) {
+            currRotation = 270;
+        }
+        else {
+            currRotation -= 90;
+        }
+        this.viewport.setRotation(currRotation);
+    }
+}
+
+/**
+ * Note: The current rotation feature is limited to 90 degree turns.
+ */
+function onRotateRight() {
+    if ( this.viewport ) {
+        var currRotation = this.viewport.getRotation();
+        if (currRotation === 270) {
+            currRotation = 0;
+        }
+        else {
+            currRotation += 90;
+        }
+        this.viewport.setRotation(currRotation);
     }
 }
 

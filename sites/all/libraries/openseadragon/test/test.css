@@ -3,6 +3,11 @@
     width: 500px;
 }
 
+#exampleNavigator {
+    height: 100px;
+    width: 150px;
+}
+
 #wideexample {
     height: 300px;
     width: 700px;
@@ -13,3 +18,12 @@
     width: 300px;
 }
 
+#unitsexample, #example-overlays {
+    height: 500px;
+    width: 500px;
+}
+
+#layersexample {
+    height: 500px;
+    width: 500px;
+}

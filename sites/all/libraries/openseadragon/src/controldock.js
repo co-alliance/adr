@@ -34,7 +34,10 @@
 
 (function( $ ){
     /**
-     * @class
+     * @class ControlDock
+     * @classdesc Provides a container element (a &lt;form&gt; element) with support for the layout of control elements.
+     *
+     * @memberof OpenSeadragon
      */
     $.ControlDock = function( options ){
         var layouts = [ 'topleft', 'topright', 'bottomright', 'bottomleft'],
@@ -43,9 +46,15 @@
 
         $.extend( true, this, {
             id: 'controldock-'+$.now()+'-'+Math.floor(Math.random()*1000000),
-            container: $.makeNeutralElement('form'),
+            container: $.makeNeutralElement( 'div' ),
             controls: []
         }, options );
+
+        // Disable the form's submit; otherwise button clicks and return keys
+        // can trigger it.
+        this.container.onsubmit = function() {
+            return false;
+        };
 
         if( this.element ){
             this.element = $.getElement( this.element );
@@ -79,7 +88,7 @@
         this.container.appendChild( this.controls.bottomleft );
     };
 
-    $.ControlDock.prototype = {
+    $.ControlDock.prototype = /** @lends OpenSeadragon.ControlDock.prototype */{
 
         /**
          * @function
@@ -116,6 +125,11 @@
                     element.style.position = "relative";
                     element.style.paddingLeft = "0px";
                     element.style.paddingTop = "0px";
+                    break;
+                case $.ControlAnchor.ABSOLUTE:
+                    div = this.container;
+                    element.style.margin = "0px";
+                    element.style.padding = "0px";
                     break;
                 default:
                 case $.ControlAnchor.NONE:

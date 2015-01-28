@@ -46,7 +46,7 @@ var I18N = {
         Security:       "It looks like a security restriction stopped us from " +
                         "loading this Deep Zoom Image.",
         Status:         "This space unintentionally left blank ({0} {1}).",
-        "Open-Failed":  "Unable to open {0}: {1}"
+        OpenFailed:     "Unable to open {0}: {1}"
     },
 
     Tooltips: {
@@ -55,15 +55,16 @@ var I18N = {
         ZoomIn:         "Zoom in",
         ZoomOut:        "Zoom out",
         NextPage:       "Next page",
-        PreviousPage:   "Previous page"
+        PreviousPage:   "Previous page",
+        RotateLeft:     "Rotate left",
+        RotateRight:    "Rotate right"
     }
 };
 
-$.extend( $, {
+$.extend( $, /** @lends OpenSeadragon */{
 
     /**
      * @function
-     * @name OpenSeadragon.getString
      * @param {String} property
      */
     getString: function( prop ) {
@@ -95,7 +96,6 @@ $.extend( $, {
 
     /**
      * @function
-     * @name OpenSeadragon.setString
      * @param {String} property
      * @param {*} value
      */
