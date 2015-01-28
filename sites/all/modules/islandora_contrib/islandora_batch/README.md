@@ -19,6 +19,9 @@ This module requires the following modules/libraries:
 * [Islandora](https://github.com/islandora/islandora)
 * [Tuque](https://github.com/islandora/tuque)
 
+Additionally, installing and enabling [Views](https://drupal.org/project/views)
+will allow additional reporting and management displays to be rendered.
+
 
 # Installation
 
@@ -36,11 +39,19 @@ The base ZIP/directory preprocessor can be called as a drush script (see `drush 
 
 This will populate the queue (stored in the Drupal database) with base entries.
 
-For the base scan, files are grouped according to their basename (without extension); DC, MODS or MARCXML in a *.xml or binary MARC in a *.mrc will be transformed to both MODS and DC, and the first entry with another extension will be used to create an "OBJ" datastream. Where there is a basename with no matching .xml or .mrc, some XML will be created which simply uses the filename as the title.
+For the base scan, files are grouped according to their basename (without extension). DC, MODS or MARCXML stored in a *.xml or binary MARC stored in a *.mrc will be transformed to both MODS and DC, and the first entry with another extension will be used to create an "OBJ" datastream. Where there is a basename with no matching .xml or .mrc, some XML will be created which simply uses the filename as the title.
 
 The queue of preprocessed items can then be processed:
 
 `drush -v --user=admin --uri=http://localhost islandora_batch_ingest`
+
+A fuller example, which preprocesses large image objects for inclusion in the collection with PID "yul:F0433", is:
+
+`drush -v --user=admin --uri=http://digital.library.yorku.ca islandora_batch_scan_preprocess --content_models=islandora:sp_large_image_cmodel --parent=yul:F0433 --parent_relationship_pred=isMemberOfCollection --type=directory --target=/tmp/batch_ingest`
+
+then, to ingest the queued objects:
+
+`drush -v --user=admin --uri=http://digital.library.yorku.ca islandora_batch_ingest`
 
 ### Customization
 

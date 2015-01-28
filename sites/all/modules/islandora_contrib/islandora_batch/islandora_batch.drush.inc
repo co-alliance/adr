@@ -15,6 +15,9 @@ function islandora_batch_drush_command() {
     'aliases' => array('ibpro', 'ibi'),
     'description' => 'Process and ingest preprocessed entries.',
     'drupal dependencies' => array('islandora_batch'),
+    'examples' => array(
+      'drush -v --user=admin --uri=http://digital.library.yorku.ca islandora_batch_ingest',
+    ),
     'options' => array(
       'timeout' => array(
         'description' => 'The max amount of time (in seconds) for which we ' .
@@ -22,6 +25,10 @@ function islandora_batch_drush_command() {
         'will complete before terminating execution. If not provided, ' .
         'should process until all available preprocessed objects are ' .
         'exhausted.',
+        'value' => 'optional',
+      ),
+      'ingest_set' => array(
+        'description' => 'Identify a particular set to process. The default is to process ALL objects in the queue, independent of sets.',
         'value' => 'optional',
       ),
     ),
@@ -33,6 +40,9 @@ function islandora_batch_drush_command() {
     'description' => 'Preprocess assets by scanning either a directory or a ' .
     'ZIP archive.',
     'drupal dependencies' => array('islandora_batch'),
+    'examples' => array(
+      'drush -v --user=admin --uri=http://digital.library.yorku.ca islandora_batch_scan_preprocess --content_models=islandora:sp_large_image_cmodel --parent=yul:F0433 --parent_relationship_pred=isMemberOfCollection --type=directory --target=/tmp/batch_ingest',
+    ),
     'options' => array(
       'type' => array(
         'description' => 'Either "directory" or "zip".',
@@ -121,6 +131,7 @@ function drush_islandora_batch_scan_preprocess() {
 function drush_islandora_batch_ingest() {
   $parameters = array(
     'timeout' => drush_get_option('timeout', NULL),
+    'ingest_set' => drush_get_option('ingest_set', NULL),
   );
 
   $parameters = array_filter($parameters);
