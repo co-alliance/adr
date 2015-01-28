@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @file
  * Implementations of installation hooks.
@@ -71,6 +72,26 @@ function islandora_solr_metadata_schema() {
         'not null' => TRUE,
         'default' => 0,
       ),
+      'date_format' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+        'description' => 'The date format used for dates.',
+      ),
+      'permissions' => array(
+        'type' => 'blob',
+        'not null' => FALSE,
+        'size' => 'big',
+        'serialize' => TRUE,
+        'description' => 'A serialized array of name value pairs that store permissions field settings.',
+      ),
+      'structured_data' => array(
+        'type' => 'blob',
+        'not null' => FALSE,
+        'size' => 'big',
+        'serialize' => TRUE,
+        'description' => 'A serialized array containing a namespace, prefix and value to be used for marking up data for SEO.',
+      ),
       'weight' => array(
         'type' => 'int',
         'not null' => TRUE,
@@ -102,6 +123,17 @@ function islandora_solr_metadata_schema() {
 }
 
 /**
+ * Implements hook_uninstall().
+ */
+function islandora_solr_metadata_uninstall() {
+  $variables = array(
+    'islandora_solr_metadata_omit_empty_values',
+    'islandora_solr_metadata_dedup_values',
+  );
+  array_walk($variables, 'variable_del');
+}
+
+/**
  * Add the hyperlink column to the database going forward.
  */
 function islandora_solr_metadata_update_7100() {
@@ -110,5 +142,31 @@ function islandora_solr_metadata_update_7100() {
     'size' => 'tiny',
     'not null' => TRUE,
     'default' => 0,
+  ));
+}
+
+/**
+ * Add additional columns needed to give new configuration options.
+ */
+function islandora_solr_metadata_update_7101() {
+  db_add_field('islandora_solr_metadata_fields', 'permissions', array(
+    'type' => 'blob',
+    'not null' => FALSE,
+    'size' => 'big',
+    'serialize' => TRUE,
+    'description' => 'A serialized array of name value pairs that store permissions field settings.',
+  ));
+  db_add_field('islandora_solr_metadata_fields', 'date_format', array(
+    'type' => 'varchar',
+    'length' => 255,
+    'not null' => FALSE,
+    'description' => 'The PHP date format used for dates.',
+  ));
+  db_add_field('islandora_solr_metadata_fields', 'structured_data', array(
+    'type' => 'blob',
+    'not null' => FALSE,
+    'size' => 'big',
+    'serialize' => TRUE,
+    'description' => 'A serialized array containing a namespace, prefix and value to be used for marking up data for SEO.',
   ));
 }
