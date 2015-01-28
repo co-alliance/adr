@@ -61,6 +61,13 @@ function islandora_repository_admin(array $form, array &$form_state) {
           '#description' => t('HTTP caching can reduce network traffic, by allowing clients to used cached copies.'),
           '#default_value' => variable_get('islandora_use_datastream_cache_headers', TRUE),
         ),
+        'islandora_defer_derivatives_on_ingest' => array(
+          '#type' => 'checkbox',
+          '#title' => t('Defer derivative generation during ingest'),
+          '#description' => t('Prevent derivatives from running during ingest,
+            useful if derivatives are to be created by an external service.'),
+          '#default_value' => variable_get('islandora_defer_derivatives_on_ingest', FALSE),
+        ),
       ),
       'islandora_namespace' => array(
         '#type' => 'fieldset',
@@ -81,6 +88,16 @@ function islandora_repository_admin(array $form, array &$form_state) {
               ':input[name="islandora_namespace_restriction_enforced"]' => array('checked' => FALSE),
             ),
           ),
+        ),
+      ),
+      'islandora_ds_replace_exclude' => array(
+        '#type' => 'fieldset',
+        '#title' => t('Excluded DSID'),
+        'islandora_ds_replace_exclude_enforced' => array(
+          '#type' => 'textfield',
+          '#title' => t('Enforce DSID restrictions'),
+          '#description' => t("A comma seperated list, allowing administrator to restrict user's access to replace a versionable datastreams latest version"),
+          '#default_value' => variable_get('islandora_ds_replace_exclude_enforced', 'RELS-EXT,RELS-INT'),
         ),
       ),
     ),

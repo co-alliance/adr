@@ -95,6 +95,7 @@ function islandora_regenerate_object_derivatives_form_submit(array $form, array 
  */
 function islandora_regenerate_object_derivatives_batch(AbstractObject $object) {
   module_load_include('inc', 'islandora', 'includes/derivatives');
+  islandora_remove_defer_derivatives_flag($object);
   return array(
     'title' => t('Regenerating all derivatives for @label', array('@label' => $object->label)),
     'operations' => islandora_do_batch_derivatives($object, array('force' => TRUE)),
@@ -117,6 +118,7 @@ function islandora_regenerate_object_derivatives_batch(AbstractObject $object) {
  */
 function islandora_regenerate_datastream_derivative_batch(AbstractDatastream $datastream) {
   module_load_include('inc', 'islandora', 'includes/derivatives');
+  islandora_remove_defer_derivatives_flag($datastream->parent);
   return array(
     'title' => t('Regenerating derivatives for the @dsid datastream', array('@dsid' => $datastream->id)),
     'operations' => islandora_do_batch_derivatives($datastream->parent, array(
@@ -142,15 +144,17 @@ function islandora_regenerate_datastream_derivative_batch(AbstractDatastream $da
  *   The pid of the object we are performing.
  * @param bool $force
  *   Whether we are forcing derivative regeneration or not.
+ * @param array $hook
+ *   The derivative definition.
  * @param array $context
  *   The context of the current batch operation.
  */
-function islandora_derivative_perform_batch_operation($function, $file, $pid, $force, &$context) {
+function islandora_derivative_perform_batch_operation($function, $file, $pid, $force, $hook, &$context) {
   if ($file) {
     require_once $file;
   }
   if (function_exists($function)) {
-    $logging = call_user_func($function, islandora_object_load($pid), $force);
+    $logging = call_user_func($function, islandora_object_load($pid), $force, $hook);
     if (!empty($logging)) {
       $context['results']['logging'][] = $logging;
     }

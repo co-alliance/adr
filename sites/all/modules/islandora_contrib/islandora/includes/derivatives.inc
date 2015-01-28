@@ -4,6 +4,51 @@
  * Defines functions used when constructing derivatives.
  */
 
+// Relations.
+define('ISLANDORA_DEFER_DERIVATIVES_FLAG', 'deferDerivatives');
+
+/**
+ * Decides which derivative function to call and runs it.
+ *
+ * @param AbstractObject $object
+ *   The object to run the derivative function for.
+ * @param string $dsid
+ *   The DSID to run the derivative function for.
+ */
+function islandora_run_derivatives(AbstractObject $object, $dsid) {
+  $batch_array = batch_get();
+  if (empty($batch_array)) {
+    $logging_results = islandora_do_derivatives($object, array(
+      'source_dsid' => $dsid,
+    ));
+    islandora_derivative_logging($logging_results);
+  }
+  else {
+    $operations = islandora_do_batch_derivatives(
+      $object,
+      array(
+        'source_dsid' => $dsid,
+      )
+    );
+    if ($operations) {
+      batch_set(
+        // Title won't show for batch in a batch.
+        array(
+          'init_message' => t('Preparing derivatives for @label', array('@label' => $object->label)),
+          'error_message' => t('An error occured creating derivatives.'),
+          'progress_message' => t(
+            'Creating derivatives for @label <br/>Time elapsed: @elapsed <br/>
+              Estimated time remaining @estimate.',
+            array('@label' => $object->label)
+          ),
+          'file' => drupal_get_path('module', 'islandora') . '/includes/regenerate_derivatives.form.inc',
+          'operations' => $operations,
+        )
+      );
+    }
+  }
+}
+
 /**
  * Kicks off derivative functions based upon hooks and conditions.
  *
@@ -49,7 +94,7 @@ function islandora_do_derivatives(AbstractObject $object, array $options) {
     }
     foreach ($hook['function'] as $function) {
       if (function_exists($function)) {
-        $logging = call_user_func($function, $object, $options['force']);
+        $logging = call_user_func($function, $object, $options['force'], $hook);
         if (!empty($logging)) {
           $results[] = $logging;
         }
@@ -142,11 +187,15 @@ function islandora_do_batch_derivatives(AbstractObject $object, array $options) 
       $file = $hook['file'];
     }
     foreach ($hook['function'] as $function) {
-      $operations[] = array('islandora_derivative_perform_batch_operation', array(
-        $function,
-        $file,
-        $object->id,
-        $options['force']),
+      $operations[] = array(
+        'islandora_derivative_perform_batch_operation',
+        array(
+          $function,
+          $file,
+          $object->id,
+          $options['force'],
+          $hook,
+        ),
       );
     }
   }
@@ -198,4 +247,40 @@ function islandora_filter_derivatives($hooks, $options, AbstractObject $object) 
   };
   $hooks = array_filter($hooks, $filter_function);
   return $hooks;
+}
+
+/**
+ * Set the defer derivatives flag on an object.
+ */
+function islandora_set_defer_derivatives_flag(AbstractObject $object) {
+  $object->relationships->add(
+    ISLANDORA_RELS_EXT_URI,
+    ISLANDORA_DEFER_DERIVATIVES_FLAG,
+    'true',
+    RELS_TYPE_PLAIN_LITERAL
+  );
+}
+
+/**
+ * Get the defer derivatives flag on an object.
+ */
+function islandora_get_defer_derivatives_flag(AbstractObject $object) {
+  return $object->relationships->get(
+    ISLANDORA_RELS_EXT_URI,
+    ISLANDORA_DEFER_DERIVATIVES_FLAG,
+    'true',
+    RELS_TYPE_PLAIN_LITERAL
+  );
+}
+
+/**
+ * Remove the defer derivatives flag on an object.
+ */
+function islandora_remove_defer_derivatives_flag(AbstractObject $object) {
+  $object->relationships->remove(
+    ISLANDORA_RELS_EXT_URI,
+    ISLANDORA_DEFER_DERIVATIVES_FLAG,
+    'true',
+    RELS_TYPE_PLAIN_LITERAL
+  );
 }
