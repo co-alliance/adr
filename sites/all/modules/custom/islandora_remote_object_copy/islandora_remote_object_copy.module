@@ -385,8 +385,34 @@ function _islandora_remote_object_copy_get_content_info($fedora_object, $fedora_
     }
   }
 
+  $mime_type_mapping = array(
+    'islandora:sp_pdf' => array(
+      'application/pdf',
+    ),
+    'islandora:sp-audioCModel' => array(
+      'audio/mpeg',
+      'audio/x-mpeg',
+      'audio/wav',
+      'audio/x-wav',
+      'audio/vnd.wave',
+    ),
+    'islandora:sp_basic_image' => array(
+      'image/gif',
+      'image/jpeg',
+      'image/png',
+    ),
+    'islandora:sp_large_image_cmodel' => array(
+      'image/tiff'
+    ),
+    'islandora:sp_videoCModel' => array(
+      'video/mp4',
+      'video/mpeg',
+      'video/quicktime',
+      'video/x-ms-wmv',
+    ),
+  );
   // PDF Object.
-  if (in_array($mime_type, array('application/pdf'))) {
+  if (in_array($mime_type, $mime_type_mapping['islandora:sp_pdf'])) {
     $content_info = array(
       'content_models' => array(
         'islandora:sp_pdf',
@@ -395,7 +421,7 @@ function _islandora_remote_object_copy_get_content_info($fedora_object, $fedora_
     );
   }
   // Audio Object.
-  if (in_array($mime_type, array('audio/mpeg', 'audio/x-mpeg', 'audio/wav', 'audio/x-wav', 'audio/vnd.wave'))) {
+  if (in_array($mime_type, $mime_type_mapping['islandora:sp-audioCModel'])) {
     $content_info = array(
       'content_models' => array(
         'islandora:sp-audioCModel',
@@ -404,7 +430,7 @@ function _islandora_remote_object_copy_get_content_info($fedora_object, $fedora_
     );
   }
   // Image Object.
-  if (in_array($mime_type, array('image/gif', 'image/jpeg', 'image/png')) && $fedora_datastream->id !== 'TN') {
+  if (in_array($mime_type, $mime_type_mapping['islandora:sp_basic_image']) && $fedora_datastream->id !== 'TN') {
     $content_info = array(
       'content_models' => array(
         'islandora:sp_basic_image',
@@ -412,11 +438,21 @@ function _islandora_remote_object_copy_get_content_info($fedora_object, $fedora_
       'content_datastream' => 'OBJ',
     );
   }
-  // Image Object.
-  if (in_array($mime_type, array('image/tiff'))) {
+  // Large Image Object.
+  if (in_array($mime_type, $mime_type_mapping['islandora:sp_large_image_cmodel'])) {
     $content_info = array(
       'content_models' => array(
         'islandora:sp_large_image_cmodel',
+      ),
+      'content_datastream' => 'OBJ',
+    );
+  }
+
+  // Video Object.
+  if (in_array($mime_type, $mime_type_mapping['islandora:sp_videoCModel'])) {
+    $content_info = array(
+      'content_models' => array(
+        'islandora:sp_videoCModel',
       ),
       'content_datastream' => 'OBJ',
     );
