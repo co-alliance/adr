@@ -1250,6 +1250,7 @@ class FedoraDatastream extends AbstractExistingFedoraDatastream implements Count
         $this->datastreamHistory[0] = $this->datastreamInfo;
       }
     }
+    $this->parent->refresh();
   }
 
   /**
@@ -1610,7 +1611,7 @@ class FedoraDatastream extends AbstractExistingFedoraDatastream implements Count
 
       case 'set':
         if ($this->controlGroup == 'E' || $this->controlGroup == 'R') {
-          $this->modifyDatastream(array('formatURI' => $value));
+          $this->modifyDatastream(array('dsLocation' => $value));
         }
         else {
           trigger_error("Cannot set url of a {$this->controlGroup} datastream, please use datastream->content.", E_USER_WARNING);
