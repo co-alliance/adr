@@ -401,13 +401,15 @@ class IslandoraBookBookBatchObject extends IslandoraFlatBatchObject {
    */
   public function addRelationships() {
     parent::addRelationships();
+    module_load_include('inc', 'islandora_paged_content', 'includes/derivatives');
 
     if (isset($this->preprocessorParameters['create_pdfs']) && $this->preprocessorParameters['create_pdfs']) {
-      $this->relationships->add(ISLANDORA_RELS_EXT_URI, 'create_pdf', 'true', TRUE);
+      islandora_paged_content_set_pdf_flag($this);
     }
-
+    // Identify the source of this object.
+    $this->relationships->add(ISLANDORA_RELS_EXT_URI, 'book-batched', 'true', RELS_TYPE_PLAIN_LITERAL);
     if (isset($this->preprocessorParameters['email_admin']) && $this->preprocessorParameters['email_admin']) {
-      $this->relationships->add(ISLANDORA_RELS_EXT_URI, 'email-admin-when-ingested', 'true', TRUE);
+      $this->relationships->add(ISLANDORA_RELS_EXT_URI, 'email-admin-when-ingested', 'true', RELS_TYPE_PLAIN_LITERAL);
     }
   }
 }
@@ -468,10 +470,8 @@ class IslandoraBookPageBatchObject extends IslandoraFlatBatchObject {
     $this->models = 'islandora:pageCModel';
     if (isset($this->preprocessorParameters['generate_ocr'])) {
       if ($this->preprocessorParameters['generate_ocr'] == TRUE) {
-        $this->relationships->add(ISLANDORA_RELS_EXT_URI, 'generate_ocr', 'TRUE', TRUE);
-      }
-      else {
-        $this->relationships->add(ISLANDORA_RELS_EXT_URI, 'generate_ocr', 'FALSE', TRUE);
+        module_load_include('inc', 'islandora_ocr', 'includes/derivatives');
+        islandora_ocr_set_generate_ocr_rels_ext_statement($this);
       }
     }
   }

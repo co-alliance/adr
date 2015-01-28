@@ -8,48 +8,15 @@
  * Implements hook_CMODEL_PID_islandora_object_ingested().
  */
 function islandora_book_batch_islandora_bookCModel_islandora_object_ingested($object) {
-  if (!isset($object['TN'])) {
-    module_load_include('inc', 'islandora_paged_content', 'includes/utilities');
-    islandora_paged_content_update_paged_content_thumbnail($object);
-  }
-
-  if ($object->relationships->get(ISLANDORA_RELS_EXT_URI, 'create_pdf', 'true', TRUE)) {
-    // Generate the PDF if the flag was set.
-    module_load_include('inc', 'islandora_paged_content', 'includes/batch');
-    module_load_include('inc', 'islandora_paged_content', 'includes/utilities');
-    $batch = islandora_paged_content_create_pdf_batch($object, array_keys(islandora_paged_content_get_pages($object)), array(
-      '-density' => '96',
-      '-compress' => 'LZW',
-    ));
-
-    $batch['operations'][] = array('islandora_book_batch_remove_pdf_flag', array($object));
-
+  if ($object->relationships->get(ISLANDORA_RELS_EXT_URI, 'book-batched', 'true', RELS_TYPE_PLAIN_LITERAL)) {
     if (module_exists('rules')) {
       // Allow rules to respond to this event. (To allow configurable messages
       // for mailing and such).
-      $batch['operations'][] = array(
-        'rules_invoke_event',
-        array('islandora_book_batch_ingested', $object->id),
-      );
+      rules_invoke_event('islandora_book_batch_ingested', $object->id);
     }
-
-    batch_set($batch);
-
-    $batch = batch_get();
-    if (!isset($batch['id'])) {
-      // Start the batch, as it does not seem to be running.
-      // XXX: Will this cause issues? If there's some other hook to run after,
-      // there might be issues, no?
-      batchProcess();
-    }
+    $object->relationships->remove(ISLANDORA_RELS_EXT_URI, 'book-batched', 'true', RELS_TYPE_PLAIN_LITERAL);
+    $object->relationships->remove(ISLANDORA_RELS_EXT_URI, 'email-admin-when-ingested', 'true', RELS_TYPE_PLAIN_LITERAL);
   }
-}
-
-/**
- * A batch operation to remove the flag.
- */
-function islandora_book_batch_remove_pdf_flag($object, &$context) {
-  $object->relationships->remove(ISLANDORA_RELS_EXT_URI, 'create_pdf', 'true', TRUE);
 }
 
 /**
