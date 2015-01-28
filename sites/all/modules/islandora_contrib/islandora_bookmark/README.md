@@ -2,11 +2,11 @@
 
 ## Introduction
 
-The Islandora Bookmark module allows users to build, manage, share and track lists of objects. Manage your bookmarks under /islandora_bookmark. There's two ways to add bookmarks to your lists.
+The Islandora Bookmark module allows users to build, manage, share and track lists of objects. Manage your bookmarks under /islandora_bookmark. There are two ways to add bookmarks to your lists:
 
 1. Through object pages: every object page will have a little tool at the bottom to bookmark the
 current object.
-2. Through Solr searches: Islandora Bookmark provides a solr display with functionality to
+2. Through Solr searches: Islandora Bookmark provides a SOLR display with functionality to
 bookmark objects based on a custom Solr query.
 
 # Requirements
@@ -24,20 +24,19 @@ Install as usual, see [this](https://drupal.org/documentation/install/modules-th
 
 ## Configuration
 
-Configure general bookmark settings in Administration » Islandora » Bookmark (admin/islandora/islandora_bookmark).
+Configure general bookmark settings in Administration » Islandora » Islandora Utility Modules » Bookmark (admin/islandora/tools/islandora-bookmark).
 
-![Configuration](http://i.imgur.com/xFqF471.png)
-
+![Configuration](https://camo.githubusercontent.com/e851eaa47d5ba712ff7e8579a91dd6da2b38ae64/687474703a2f2f692e696d6775722e636f6d2f7664747444534d2e706e67)
 
 Enable 'Bookmark' in Administration » Islandora » Solr index » Solr Settings (admin/islandora/search/islandora_solr/settings).
 
-Set the permissions in Administration » People (admin/people/permissions). There are permissions to administer, use and share bookmarks. Anonymous users can never share bookmarks.
+Set the permissions in Administration » People (admin/people/permissions). There are permissions to administer, use, and share bookmarks. Anonymous users can never share bookmarks.
 
 ### Customization
 
 Table cells referencing the bookmarked objects in both bookmark lists and bookmark Solr results can be modified. One way is by overriding the default template file located at `theme/islandora-bookmark-object-display.tpl.php`. Another way is to use `hook_islandora_bookmark_object_markup()` to let another module define the content and markup.
 
-The admin page has an option that allows for a singular, default Bookmark list be created for each individual user. This list differs in the fact that it cannot be deleted.
+The admin page has an option that allows for a single default Bookmark list be created for each individual user. This list differs in the fact that it cannot be deleted.
 
 ## Troubleshooting/Issues
 
