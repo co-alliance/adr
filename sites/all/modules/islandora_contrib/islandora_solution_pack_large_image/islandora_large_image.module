@@ -10,9 +10,9 @@
  */
 function islandora_large_image_menu() {
   $items = array();
-  $items['admin/islandora/large_image'] = array(
-    'title' => 'Large Image Collection',
-    'description' => 'Configure the Large Image Solution Pack.',
+  $items['admin/islandora/solution_pack_config/large_image'] = array(
+    'title' => 'Large Images',
+    'description' => 'Define ingest behavior, and select viewer image viewer.',
     'page callback' => 'drupal_get_form',
     'access arguments' => array('administer site configuration'),
     'page arguments' => array('islandora_large_image_admin'),
@@ -77,12 +77,6 @@ function islandora_large_image_islandora_required_objects(IslandoraTuque $connec
   $large_image_content_model->owner = 'fedoraAdmin';
   $large_image_content_model->label = 'Islandora Large Image Content Model';
   $large_image_content_model->models = 'fedora-system:ContentModel-3.0';
-  // ISLANDORACM Datastream.
-  $datastream = $large_image_content_model->constructDatastream('ISLANDORACM', 'X');
-  $datastream->label = 'Islandora content model';
-  $datastream->mimetype = 'text/xml';
-  $datastream->setContentFromFile("$module_path/xml/islandora_sp_large_image_cmodel.xml", FALSE);
-  $large_image_content_model->ingestDatastream($datastream);
   // DS-COMPOSITE-MODEL Datastream.
   $datastream = $large_image_content_model->constructDatastream('DS-COMPOSITE-MODEL', 'X');
   $datastream->label = 'DS-COMPOSITE-MODEL';
@@ -221,7 +215,10 @@ function islandora_large_image_preprocess_islandora_large_image(&$variables) {
   if ($viewer) {
     if (strpos($viewer, 'islandora-openseadragon') !== FALSE) {
       if (isset($islandora_object['JP2']) && islandora_datastream_access(ISLANDORA_VIEW_OBJECTS, $islandora_object['JP2'])) {
-        $variables['image_clip'] = l(t('Clip Image'), "islandora/object/{$islandora_object->id}/print", array('attributes' => array('title' => 'Clip Image', 'id' => 'clip')));
+        $variables['image_clip'] = theme(
+          'islandora_openseadragon_clipper',
+          array('pid' => $islandora_object->id)
+        );
       }
     }
     $variables['islandora_content'] = $viewer;
