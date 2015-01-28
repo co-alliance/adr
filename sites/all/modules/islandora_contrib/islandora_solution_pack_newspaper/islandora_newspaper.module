@@ -32,9 +32,9 @@ function islandora_newspaper_menu() {
     'file' => 'includes/manage_issue.inc',
   );
   return array(
-    'admin/islandora/newspaper' => array(
-      'title' => 'Newspaper Collection',
-      'description' => 'Configure the Newspaper Solution Pack.',
+    'admin/islandora/solution_pack_config/newspaper' => array(
+      'title' => 'Newspapers',
+      'description' => 'Select viewers and configure ingest behavior.',
       'page callback' => 'drupal_get_form',
       'access arguments' => array('administer site configuration'),
       'page arguments' => array('islandora_newspaper_admin_settings_form'),
@@ -159,12 +159,6 @@ function islandora_newspaper_islandora_required_objects(IslandoraTuque $connecti
   $newspaper_content_model->owner = 'fedoraAdmin';
   $newspaper_content_model->label = 'Islandora Newspaper Content Model';
   $newspaper_content_model->models = 'fedora-system:ContentModel-3.0';
-  // ISLANDORACM datastream.
-  $datastream = $newspaper_content_model->constructDatastream('ISLANDORACM', 'X');
-  $datastream->label = 'Islandora Newspaper Content Model';
-  $datastream->mimetype = 'text/xml';
-  $datastream->setContentFromFile("$module_path/xml/content_models/newspaperCModel.xml", FALSE);
-  $newspaper_content_model->ingestDatastream($datastream);
   // DS-COMPOSITE-MODEL datastream.
   $datastream = $newspaper_content_model->constructDatastream('DS-COMPOSITE-MODEL', 'X');
   $datastream->label = 'DS-COMPOSITE-MODEL';
@@ -177,12 +171,6 @@ function islandora_newspaper_islandora_required_objects(IslandoraTuque $connecti
   $newspaper_issue_content_model->owner = 'fedoraAdmin';
   $newspaper_issue_content_model->label = 'Islandora Newspaper Issue Content Model';
   $newspaper_issue_content_model->models = 'fedora-system:ContentModel-3.0';
-  // ISLANDORACM datastream.
-  $datastream = $newspaper_issue_content_model->constructDatastream('ISLANDORACM', 'X');
-  $datastream->label = 'Islandora Newspaper Issue Content Model';
-  $datastream->mimetype = 'text/xml';
-  $datastream->setContentFromFile("$module_path/xml/content_models/newspaperIssueCModel.xml", FALSE);
-  $newspaper_issue_content_model->ingestDatastream($datastream);
   // DS-COMPOSITE-MODEL datastream.
   $datastream = $newspaper_issue_content_model->constructDatastream('DS-COMPOSITE-MODEL', 'X');
   $datastream->label = 'DS-COMPOSITE-MODEL';
@@ -195,12 +183,6 @@ function islandora_newspaper_islandora_required_objects(IslandoraTuque $connecti
   $newspaper_page_content_model->owner = 'fedoraAdmin';
   $newspaper_page_content_model->label = 'Islandora Newspaper Page Content Model';
   $newspaper_page_content_model->models = 'fedora-system:ContentModel-3.0';
-  // ISLANDORACM datastream.
-  $datastream = $newspaper_page_content_model->constructDatastream('ISLANDORACM', 'X');
-  $datastream->label = 'Islandora Newspaper Page Content Model';
-  $datastream->mimetype = 'text/xml';
-  $datastream->setContentFromFile("$module_path/xml/content_models/newspaperPageCModel.xml", FALSE);
-  $newspaper_page_content_model->ingestDatastream($datastream);
   // DS-COMPOSITE-MODEL datastream.
   $datastream = $newspaper_page_content_model->constructDatastream('DS-COMPOSITE-MODEL', 'X');
   $datastream->label = 'DS-COMPOSITE-MODEL';
@@ -386,11 +368,12 @@ function islandora_newspaper_islandora_newspaperpagecmodel_islandora_solr_object
 
       if (islandora_object_access(ISLANDORA_VIEW_OBJECTS, islandora_object_load($issue_pid))) {
         $search_results['object_url'] = "islandora/object/$issue_pid";
+        $search_results['object_url_fragment'] = "page/$page_number/mode/1up";
 
         // XXX: Won't handle fielded searches nicely... then again, if our
         // highlighting field is not the one being search on, this makes sense?
         if ($query_processor->solrDefType == 'dismax' || $query_processor->solrDefType == 'edismax') {
-          $search_results['object_url_fragment'] = "page/$page_number/mode/1up/search/" . rawurlencode($query_processor->solrQuery);
+          $search_results['object_url_fragment'] .= "/search/" . rawurlencode($query_processor->solrQuery);
         }
       }
     }
@@ -446,115 +429,18 @@ function islandora_newspaper_process_islandora_object_print(array &$variables) {
 
 /**
  * Implements hook_islandora_derivative().
- *
- * XXX: Should add in ability to regenerate PDFs as well... No reliable way to
- * kick off a batch though...
  */
 function islandora_newspaper_islandora_newspaperissuecmodel_islandora_derivative() {
-  $pc_mod_path = drupal_get_path('module', 'islandora_paged_content');
-
-  $derivatives = array();
-
   module_load_include('inc', 'islandora_paged_content', 'includes/utilities');
-  $derive = islandora_paged_content_get_enabled_ingest_derivatives('islandora_newspaper');
-
-  if ($derive['image']) {
-    $derivatives[] = array(
-      'source_dsid' => NULL,
-      'destination_dsid' => 'TN',
-      'function' => array(
-        'islandora_paged_content_derive_thumbnail_of_parent',
-      ),
-      'file' => "$pc_mod_path/includes/derivatives.inc",
-    );
-  }
-
-  return $derivatives;
+  return islandora_paged_content_paged_object_derivatives('islandora_newspaper');
 }
 
 /**
  * Implements hook_islandora_derivative().
  */
 function islandora_newspaper_islandora_newspaperpagecmodel_islandora_derivative() {
-  $pc_mod_path = drupal_get_path('module', 'islandora_paged_content');
-  $li_mod_path = drupal_get_path('module', 'islandora_large_image');
-  $ocr_mod_path = drupal_get_path('module', 'islandora_ocr');
   module_load_include('inc', 'islandora_paged_content', 'includes/utilities');
-  $derive = islandora_paged_content_get_enabled_ingest_derivatives('islandora_newspaper');
-  $derivatives = array();
-
-  if ($derive['pdf']) {
-    $derivatives[] = array(
-      'source_dsid' => 'OBJ',
-      'destination_dsid' => 'PDF',
-      'function' => array(
-        'islandora_paged_content_derivatives_pdf',
-      ),
-      'file' => "$pc_mod_path/includes/derivatives.inc",
-    );
-  }
-  if ($derive['image']) {
-    $derivatives[] = array(
-      'source_dsid' => 'OBJ',
-      'destination_dsid' => 'TN',
-      'function' => array(
-        'islandora_large_image_create_tn_derivative',
-      ),
-      'file' => "$li_mod_path/includes/derivatives.inc",
-    );
-    $derivatives[] = array(
-      'source_dsid' => 'OBJ',
-      'destination_dsid' => 'JPG',
-      'function' => array(
-        'islandora_large_image_create_jpg_derivative',
-      ),
-      'file' => "$li_mod_path/includes/derivatives.inc",
-    );
-    $derivatives[] = array(
-      'source_dsid' => 'OBJ',
-      'destination_dsid' => 'JP2',
-      'function' => array(
-        'islandora_large_image_create_jp2_derivative',
-      ),
-      'file' => "$li_mod_path/includes/derivatives.inc",
-    );
-    $derivatives[] = array(
-      'source_dsid' => 'JP2',
-      'destination_dsid' => NULL,
-      'function' => array(
-        'islandora_paged_content_add_dimensions_relationships',
-      ),
-      'file' => "$pc_mod_path/includes/utilities.inc",
-    );
-    $derivatives[] = array(
-      'source_dsid' => 'TN',
-      'destination_dsid' => NULL,
-      'function' => array(
-        'islandora_paged_content_derive_thumbnail_on_parent',
-      ),
-      'file' => "$pc_mod_path/includes/derivatives.inc",
-    );
-  }
-  if ($derive['ocr']) {
-    $derivatives[] = array(
-      'source_dsid' => 'OBJ',
-      'destination_dsid' => 'OCR',
-      'function' => array(
-        'islandora_ocr_derive_ocr',
-      ),
-      'file' => "$ocr_mod_path/includes/derivatives.inc",
-    );
-    $derivatives[] = array(
-      'source_dsid' => 'OBJ',
-      'destination_dsid' => 'HOCR',
-      'function' => array(
-        'islandora_ocr_derive_hocr',
-      ),
-      'file' => "$ocr_mod_path/includes/derivatives.inc",
-    );
-  }
-
-  return $derivatives;
+  return islandora_paged_content_page_derivatives('islandora_newspaper');
 }
 
 /**
