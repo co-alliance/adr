@@ -13,12 +13,6 @@ define('ISLANDORA_SCHOLAR_EMBARGO_EXPIRY_PRED', 'embargo-until');
 define('ISLANDORA_SCHOLAR_EMBARGO_CAN_EMBARGO_OWNED', 'can embargo owned objects');
 define('ISLANDORA_SCHOLAR_EMBARGO_CAN_EMBARGO_ANY', 'can embargo any object');
 
-// @codingStandardsIgnoreStart
-// XXX: These should be removed at some point in the future.
-define('ISLANDORA_EMBARGO_CAN_EMBARGO_OWNED', ISLANDORA_SCHOLAR_EMBARGO_CAN_EMBARGO_OWNED);
-define('ISLANDORA_EMBARGO_CAN_EMBARGO_ANY', ISLANDORA_SCHOLAR_EMBARGO_CAN_EMBARGO_ANY);
-// @codingStandardsIgnoreEnd
-
 /**
  * Implements hook_menu().
  */
@@ -32,7 +26,7 @@ function islandora_scholar_embargo_menu() {
     'access arguments' => array(2),
     'file' => 'includes/embargo.inc',
   );
-  $items['admin/islandora/embargo'] = array(
+  $items['admin/islandora/solution_pack_config/embargo'] = array(
     'title' => 'Islandora Scholar Embargo',
     'description' => 'Configure the Embargo module.',
     'page callback' => 'drupal_get_form',
@@ -40,7 +34,7 @@ function islandora_scholar_embargo_menu() {
     'access arguments' => array(ISLANDORA_SCHOLAR_EMBARGO_CAN_EMBARGO_ANY),
     'file' => 'includes/admin.form.inc',
   );
-  $items['admin/islandora/embargo/settings'] = array(
+  $items['admin/islandora/solution_pack_config/embargo/settings'] = array(
     'title' => 'Embargo settings',
     'description' => 'Configure the Embargo module.',
     'page callback' => 'drupal_get_form',
@@ -49,7 +43,7 @@ function islandora_scholar_embargo_menu() {
     'file' => 'includes/admin.form.inc',
     'type' => MENU_DEFAULT_LOCAL_TASK,
   );
-  $items['admin/islandora/embargo/list'] = array(
+  $items['admin/islandora/solution_pack_config/embargo/list'] = array(
     'title' => 'Manage Embargoed Items',
     'file' => 'includes/embargo_manage.inc',
     'page callback' => 'drupal_get_form',
@@ -301,15 +295,19 @@ function islandora_scholar_embargo_users_to_notify(AbstractObject $object) {
  *
  * The item embargoed is identified by both the pid and dsid values.
  *
- * @param string $pid
- *   A string containing a Fedora PID, which is either the item disembargoed,
- *   or the item in which the datastream to be embargoed exists.
+ * @param string $param
+ *   Either a string containing a Fedora PID or an AbstractObject, representing
+ *   either the item disembargoed, or the item in which the datastream to be
+ *   embargoed exists.
  * @param mixed $dsid
  *   Either NULL--meaning the object should be disembargoed--or a string
  *   representing a datastream ID to be disembargoed.
  */
-function islandora_scholar_embargo_lift_embargo($pid, $dsid = NULL) {
-  $item = islandora_object_load($pid);
+function islandora_scholar_embargo_lift_embargo($param, $dsid = NULL) {
+  $item = $param instanceof AbstractObject ?
+    $param :
+    islandora_object_load($param);
+  $pid = $item->id;
   $xacml = new IslandoraXacml($item);
 
   if ($dsid === NULL) {
@@ -336,14 +334,17 @@ function islandora_scholar_embargo_lift_embargo($pid, $dsid = NULL) {
 
   $xacml->writeBackToFedora();
 
-  $expiry = $rels[0]['object']['value'];
-  // Send email notification.
-  $params['pid'] = $pid;
-  $params['item_title'] = $item->label;
-  $params['dsid'] = isset($dsid) ? $dsid : NULL;
-  $params['expiry_date'] = $expiry;
-  $key = 'lifted_embargo';
-  islandora_embargo_user_notify($key, $item, $params);
+  // Only notify if the object exists in the repository.
+  if ($item instanceof FedoraObject) {
+    $expiry = $rels[0]['object']['value'];
+    // Send email notification.
+    $params['pid'] = $pid;
+    $params['item_title'] = $item->label;
+    $params['dsid'] = isset($dsid) ? $dsid : NULL;
+    $params['expiry_date'] = $expiry;
+    $key = 'lifted_embargo';
+    islandora_embargo_user_notify($key, $item, $params);
+  }
 }
 
 /**
