@@ -10,7 +10,7 @@
  */
 function islandora_simple_workflow_menu() {
   $items = array();
-  $items['admin/islandora/simple_workflow/list'] = array(
+  $items['admin/islandora/tools/simple_workflow/list'] = array(
     'title' => 'Simple Workflow objects',
     'description' => 'List of inactive objects.',
     'page callback' => 'drupal_get_form',
@@ -28,7 +28,7 @@ function islandora_simple_workflow_permission() {
   return array(
     'bypass inactive object state' => array(
       'title' => t('Bypass default inactive object state'),
-      'description' => t('Islandora Simple Workflow sets ingested objects as inactive if enabled.'),
+      'description' => t('Islandora Simple Workflow sets ingested objects as active if enabled.'),
     ),
     'manage inactive objects' => array(
       'title' => t('Manage inactive objects'),
