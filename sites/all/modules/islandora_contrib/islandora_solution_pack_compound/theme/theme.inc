@@ -10,72 +10,36 @@
 /**
  * Theme function for the compound navigation block parts.
  */
-function theme_islandora_compound_prev_next($variables) {
+function template_preprocess_islandora_compound_prev_next(array &$variables) {
   drupal_add_js(drupal_get_path('module', 'islandora_compound_object') . '/js/caption_width.js');
 
-  $output = '<div class="islandora-compound-prev-next">';
-  $output .= '<span class="islandora-compound-title">' . t('Part of: @parent (@count objects)',
-    array('@parent' => $variables['parent_label'], '@count' => $variables['child_count']));
-
-  if ($variables['parent_url']) {
-    $output .= ' ' . l(t('manage parent'), $variables['parent_url']);
-  }
-  $output .= '</span><br/>';
-
-  if (!empty($variables['previous_pid'])) {
-    $output .= l(t('Previous'), 'islandora/object/' . $variables['previous_pid']);
-  }
-  if (!empty($variables['previous_pid']) && !empty($variables['next_pid'])) {
-    $output .= ' | ';
-  }
-  if (!empty($variables['next_pid'])) {
-    $output .= l(t('Next'), 'islandora/object/' . $variables['next_pid']);
-  }
-
-  if ($variables['child_count'] > 0) {
-    $output .= '<div class="islandora-compound-thumbs">';
-    for ($i = 0; $i < count($variables['siblings']); $i++) {
-      $output .= '<div class="islandora-compound-thumb">';
-      $sibling = $variables['siblings'][$i];
-      if ($sibling === $variables['pid']) {
-        $active = array('class' => 'active');
+  $themed_siblings = array();
+  $image_path = drupal_get_path('module', 'islandora');
+  $folder_image_path = "$image_path/images/folder.png";
+  if ($variables['child_count'] > 1) {
+    for ($i = 0; $i < count($variables['siblings']); $i += 1) {
+      $sibling = array();
+      $sibling['pid'] = $variables['siblings'][$i];
+      $sibling['class'] = array();
+      if ($sibling['pid'] === $variables['pid']) {
+        $sibling['class'][] = 'active';
       }
-      else {
-        $active = array();
-      }
-      $sibling_object = islandora_object_load($sibling);
+      $sibling_object = islandora_object_load($sibling['pid']);
       if (isset($sibling_object['TN']) && islandora_datastream_access(ISLANDORA_VIEW_OBJECTS, $sibling_object['TN'])) {
-        $path = 'islandora/object/' . $sibling . '/datastream/TN/view';
+        $sibling['TN'] = 'islandora/object/' . $sibling['pid'] . '/datastream/TN/view';
       }
       else {
         // Object either does not have a thumbnail or it's restricted show a
         // default in its place.
-        $image_path = drupal_get_path('module', 'islandora');
-        $path = "$image_path/images/folder.png";
+        $sibling['TN'] = $folder_image_path;
       }
-
-      $output .= "<span class='islandora-compound-caption'>{$sibling_object->label}</span>";
-
-      $output .= l(
-        theme_image(
-          array(
-            'path' => $path,
-            'attributes' => array('class' => $active),
-          )
-        ),
-        'islandora/object/' . $sibling,
-        array('html' => TRUE)
-      );
-
-      $output .= '</div>';
+      $sibling['label'] = $sibling_object->label;
+      $themed_siblings[] = $sibling;
     }
-    $output .= '</div>';
   }
-
-  $output .= '</div>';
-
-  return $output;
+  $variables['themed_siblings'] = $themed_siblings;
 }
+
 
 /**
  * Implements theme_element().
