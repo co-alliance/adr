@@ -402,7 +402,8 @@ function _islandora_remote_object_copy_get_content_info($fedora_object, $fedora_
       'image/png',
     ),
     'islandora:sp_large_image_cmodel' => array(
-      'image/tiff'
+      'image/tiff',
+      'image/tif',
     ),
     'islandora:sp_videoCModel' => array(
       'video/mp4',
