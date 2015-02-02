@@ -458,5 +458,8 @@ function _islandora_remote_object_copy_get_content_info($fedora_object, $fedora_
       'content_datastream' => 'OBJ',
     );
   }
+  if (!empty($mime_type) && $fedora_datastream->id !== 'TN' && empty($content_info)) {
+    drupal_set_message(t("Datastream %datastream of type @type could not be mapped for @fedora_id", array('%datastream' => $fedora_datastream->id, '@type' => $mime_type, '@fedora_id' => $fedora_object->id)));
+  }
   return $content_info;
 }
