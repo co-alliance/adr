@@ -397,7 +397,7 @@ function islandora_get_datastreams_requirements_from_models(array $models) {
   }
   // The AUDIT Datastream can not really be added, so it can't really be
   // missing.
-  unset($dsids['AUDIT']);
+  // unset($dsids['AUDIT']);
   return $dsids;
 }
 
