@@ -316,7 +316,8 @@ function islandora_remote_object_copy_create_single_object_item($fedora_object_d
     );
     $datastreams = array(
       'MODS',
-      'DC'
+      'DC',
+      'POLICY',
     );
     if ($keep_id) {
       $islandora_child_object = $tuque->repository->constructObject($fedora_object->id);
