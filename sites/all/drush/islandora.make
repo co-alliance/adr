@@ -99,6 +99,7 @@ projects[islandora_marcxml][type] = module
 projects[islandora_marcxml][download][type] = git
 projects[islandora_marcxml][download][url] = https://github.com/Islandora/islandora_marcxml.git
 projects[islandora_marcxml][download][tag] = 7.x-1.4
+projects[islandora_marcxml][patch][] = https://gist.githubusercontent.com/btmash/61cbe892536e9f9e5c67/raw/39b279c3012143838b6de6d685ba70816ce974cb/islandora_marcxml_custom_xsl.patch
 
 projects[islandora_oai][type] = module
 projects[islandora_oai][download][type] = git
