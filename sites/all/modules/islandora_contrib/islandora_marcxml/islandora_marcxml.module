@@ -29,6 +29,14 @@ function islandora_marcxml_menu() {
       'delivery callback' => 'islandora_marcxml_xml_download',
       'file' => 'includes/utilities.inc',
     ),
+    'admin/islandora/islandora_marcxml' => array(
+      'title' => 'MarcXML configuration',
+      'type' => MENU_NORMAL_ITEM,
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('islandora_marcxml_settings'),
+      'access arguments' => array('administer site configuration'),
+      'file' => 'includes/admin.form.inc',
+    ),
   );
 }
 

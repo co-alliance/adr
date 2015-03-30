@@ -1,0 +1,11 @@
+<?php
+
+/**
+ * Implements hook_install().
+ */
+function islandora_marcxml_install() {
+  $islandora_marcxml_path = drupal_get_path('module', 'islandora_marcxml');
+  variable_set('islandora_marcxml_mods_to_marc_xsl_path', $islandora_marcxml_path . '/xsl/MODS2MARC21slim.xsl');
+  variable_set('islandora_marcxml_marc_to_html_xsl_path', $islandora_marcxml_path . '/xsl/MARC21slim2HTML.xsl');
+  variable_set('islandora_marcxml_marc_to_mods_xsl_path', $islandora_marcxml_path . '/xsl/MARC21slim2MODS3-5.xsl');
+}

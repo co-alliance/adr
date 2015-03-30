@@ -43,7 +43,7 @@ function islandora_marcxml_transform_mods_to_marcxml(AbstractObject $object) {
   $mods_str = trim($object['MODS']->content);
   return islandora_marcxml_run_xsl_transform(array(
     'input' => $mods_str,
-    'xsl' => drupal_get_path('module', 'islandora_marcxml') . '/xsl/MODS2MARC21slim.xsl',
+    'xsl' => variable_get('islandora_marcxml_mods_to_marc_xsl_path', drupal_get_path('module', 'islandora_marcxml') . '/xsl/MODS2MARC21slim.xsl'),
   ));
 }
 
@@ -61,7 +61,7 @@ function islandora_marcxml_transform_mods_to_marcxml(AbstractObject $object) {
 function islandora_marcxml_transform_marc_to_html(AbstractObject $object) {
   return islandora_marcxml_run_xsl_transform(array(
     'input' => islandora_marcxml_transform_mods_to_marcxml($object),
-    'xsl' => drupal_get_path('module', 'islandora_marcxml') . '/xsl/MARC21slim2HTML.xsl',
+    'xsl' => variable_get('islandora_marcxml_marc_to_html_xsl_path', drupal_get_path('module', 'islandora_marcxml') . '/xsl/MARC21slim2HTML.xsl'),
   ));
 }
 
@@ -79,7 +79,7 @@ function islandora_marcxml_transform_marc_to_html(AbstractObject $object) {
 function islandora_marcxml_populate_mods(AbstractObject $object, $file) {
   $created = FALSE;
   $transform_args = array(
-    'xsl' => drupal_get_path('module', 'islandora_marcxml') . '/xsl/MARC21slim2MODS3-5.xsl',
+    'xsl' => variable_get('islandora_marcxml_marc_to_mods_xsl_path', drupal_get_path('module', 'islandora_marcxml') . '/xsl/MARC21slim2MODS3-5.xsl'),
     'input' => file_get_contents($file->uri),
   );
   $transformed_xml = trim(islandora_marcxml_run_xsl_transform($transform_args));
