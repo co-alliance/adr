@@ -196,7 +196,7 @@
 			</mods:name>
 		</xsl:for-each>
 		<!--  2009-11-16 Display 110 on single line.  -->
-		<xsl:variable name="exist-110" select="marc:datafield[@tag='110']"> </xsl:variable>
+		<xsl:variable name="exist-110" select="marc:datafield[@tag='110']" />
 		<xsl:if test="$exist-110">
 			<mods:name type="corporate">
 				<mods:namePart>
