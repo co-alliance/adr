@@ -380,9 +380,13 @@ class IslandoraScanBatchObject extends IslandoraBatchObject {
           }
           // MARCXML, transform to MODS and set.
           elseif ($s_xml->getName() == 'record') {
+            $mods_transform_xsl_path = $dir . '/transforms/MARC21slim2MODS3-4.xsl';
+            if (module_exists('islandora_marcxml')) {
+              $mods_transform_xsl_path = variable_get('islandora_marcxml_marc_to_mods_xsl_path', drupal_get_path('module', 'islandora_marcxml') . '/xsl/MARC21slim2MODS3-5.xsl');
+            }
             $mods_datastream->content = static::runXslTransform(array(
               'input' => $xml,
-              'xsl' => $dir . '/transforms/MARC21slim2MODS3-4.xsl',
+              'xsl' => $mods_transform_xsl_path,
             ));
           }
           // DC, transform to MODS and set.
