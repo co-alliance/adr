@@ -10,14 +10,11 @@ var page_sentinal = 0;
 var rebuild = false;
 (function($) {
 	$(document).ready(function() {
-		current_page = 1;
-	    get_data(current_page);
-	    build_form();
-	    load_rotator();
-
-
-	});
-
+	  current_page = 1;
+      get_data(current_page);
+      build_form();
+      load_rotator();
+  });
   })(jQuery);
 
 /**
@@ -32,11 +29,11 @@ function get_data(place) {
     url: base + 'accordion_rotator/setup',
     async:false,
     success: function(data, status, xhr) {
-    	current_page = 0;
+      current_page = 0;
       all_data = data;
     },
-    error: function() {
-        alert("An error populating the Accordion Rotator.");
+    error: function( jqXHR, textStatus, errorThrown) {
+       alert(textStatus + "\n\n" + errorThrown);
     },
     dataType: 'json'
   });
