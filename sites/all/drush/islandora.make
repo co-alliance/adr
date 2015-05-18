@@ -27,12 +27,6 @@ projects[islandora][download][type] = git
 projects[islandora][download][url] = https://github.com/Islandora/islandora.git
 projects[islandora][download][tag] = 7.x-1.4
 
-projects[islandora_accordion_rotator_module][type] = module
-projects[islandora_accordion_rotator_module][download][type] = git
-projects[islandora_accordion_rotator_module][download][url] = https://github.com/jordandukart/islandora_accordion_rotator_module.git
-; no release-specific version available
-projects[islandora_accordion_rotator_module][download][revision] = 19847e6476e37bb276eb802f47465f65660f7a1e
-
 projects[islandora_batch][type] = module
 projects[islandora_batch][download][type] = git
 projects[islandora_batch][download][url] = https://github.com/Islandora/islandora_batch.git
