@@ -392,6 +392,7 @@ function islandora_remote_object_copy_create_single_object_item($fedora_object_d
       'createdDate',
       'lastModifiedDate',
       'owner',
+      'label',
       'logMessage',
     );
     $datastreams = array(
