@@ -408,10 +408,7 @@ function islandora_remote_object_copy_create_single_object_item($fedora_object_d
       }
     } else {
       $islandora_child_object = $tuque->repository->constructObject($namespace[0]);
-      $label = $fedora_datastream->label;
-      if (!$fedora_datastream->label) {
-        $label = $fedora_object_datastream->id;
-      }
+      $label = $fedora_object_datastream->id;
     }
     $islandora_child_object->label = $label;
     foreach ($object_properties as $property) {
@@ -435,7 +432,14 @@ function islandora_remote_object_copy_create_single_object_item($fedora_object_d
       }
     }
     $ds = $islandora_child_object->constructDatastream($content_datastream);
-    $ds->label = $fedora_datastream->label;
+    $label = $fedora_datastream->label;
+    if (empty($label)) {
+      $label = $content_datastream;
+    }
+    if (!$keep_id) {
+      $label = $fedora_object_datastream->id;
+    }
+    $ds->label = $label;
     $ds->mimetype = $fedora_datastream->mimetype;
     $ds->control_group = 'M';
     $ds->setContentFromString($fedora_datastream->content);
