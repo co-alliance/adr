@@ -399,17 +399,21 @@ function islandora_remote_object_copy_create_single_object_item($fedora_object_d
       'DC',
       'POLICY',
     );
+    $label = $fedora_object->id;
     if ($keep_id) {
       $islandora_child_object = $tuque->repository->constructObject($fedora_object->id);
+      $label = $fedora_object->label;
+      if (!$label) {
+        $label = $fedora_datastream->label;
+      }
     } else {
       $islandora_child_object = $tuque->repository->constructObject($namespace[0]);
+      $label = $fedora_datastream->label;
+      if (!$fedora_datastream->label) {
+        $label = $fedora_object_datastream->id;
+      }
     }
-    if ($fedora_object->label) {
-      $islandora_child_object->label = $fedora_object->label;
-    }
-    else {
-      $islandora_child_object->label = $fedora_datastream->label;
-    }
+    $islandora_child_object->label = $label;
     foreach ($object_properties as $property) {
       if (isset($fedora_object->$property)) {
         $islandora_child_object->$property = $fedora_object->$property;
