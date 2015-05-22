@@ -392,7 +392,6 @@ function islandora_remote_object_copy_create_single_object_item($fedora_object_d
       'createdDate',
       'lastModifiedDate',
       'owner',
-      'label',
       'logMessage',
     );
     $datastreams = array(
@@ -405,7 +404,12 @@ function islandora_remote_object_copy_create_single_object_item($fedora_object_d
     } else {
       $islandora_child_object = $tuque->repository->constructObject($namespace[0]);
     }
-    $islandora_child_object->label = $fedora_datastream->label;
+    if ($fedora_object->label) {
+      $islandora_child_object->label = $fedora_object->label;
+    }
+    else {
+      $islandora_child_object->label = $fedora_datastream->label;
+    }
     foreach ($object_properties as $property) {
       if (isset($fedora_object->$property)) {
         $islandora_child_object->$property = $fedora_object->$property;
