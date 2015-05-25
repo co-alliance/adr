@@ -189,13 +189,25 @@ class ZipBatchImportObject extends IslandoraImportObject {
     parent::__construct($source);
     $this->pidNamespace = $this->source['pid_namespace'];
     $this->contentModel = (array) $this->source['content_model'];
+  }
+
+  public static function MARC2MODS() {
     $transform_path = drupal_get_path('module', 'zip_importer') . '/xsl';
-    self::$MARC2MODS = "$transform_path/MARC21slim2MODS3-4.xsl";
+    $xsl_path = "$transform_path/MARC21slim2MODS3-4.xsl";
     if (module_exists('islandora_marcxml')) {
-      self::$MARC2MODS = variable_get('islandora_marcxml_marc_to_mods_xsl_path', drupal_get_path('module', 'islandora_marcxml') . '/xsl/MARC21slim2MODS3-5.xsl');
+      $xsl_path = variable_get('islandora_marcxml_marc_to_mods_xsl_path', drupal_get_path('module', 'islandora_marcxml') . '/xsl/MARC21slim2MODS3-5.xsl');
     }
-    self::$DC2MODS = "$transform_path/simpleDC2MODS.xsl";
-    self::$DWC2DC = "$transform_path/dwc_to_dc.xsl";
+    return $xsl_path;
+  }
+
+  public static function DC2MODS() {
+    $transform_path = drupal_get_path('module', 'zip_importer') . '/xsl';
+    return "$transform_path/simpleDC2MODS.xsl";
+  }
+
+  public static function DWC2DC() {
+    $transform_path = drupal_get_path('module', 'zip_importer') . '/xsl';
+    return "$transform_path/dwc_to_dc.xsl";
   }
 
   /**
@@ -360,14 +372,14 @@ class ZipBatchImportObject extends IslandoraImportObject {
         // wrappers that come out of the XSL output before setting the contents.
         // As documented, Islandora does not support multiple records within
         // a single MARC collection wrapper.
-        $transformed_marc = static::runXSLTransform(array('input' => $xml, 'xsl' => self::$MARC2MODS));
+        $transformed_marc = static::runXSLTransform(array('input' => $xml, 'xsl' => self::MARC2MODS()));
         $this->mods = $this->cleanupMARC($transformed_marc);
       }
       elseif ($this->isDC($xml)) {
-        $this->mods = static::runXSLTransform(array('input' => $xml, 'xsl' => self::$DC2MODS));
+        $this->mods = static::runXSLTransform(array('input' => $xml, 'xsl' => self::DC2MODS()));
       }
       elseif ($this->isDWC($xml)) {
-        $this->mods = static::runXSLTransform(array('input' => $this->getDC(), 'xsl' => self::$DC2MODS));
+        $this->mods = static::runXSLTransform(array('input' => $this->getDC(), 'xsl' => self::DC2MODS));
       }
       if (empty($this->mods)) {
         // If we do not yet have any XML, create a dumb MODS with just the
@@ -400,7 +412,7 @@ EOXML;
         $this->dc = $xml;
       }
       elseif ($this->isDWC($xml)) {
-        $this->dc = static::runXSLTransform(array('input' => $xml, 'xsl' => self::$DWC2DC));
+        $this->dc = static::runXSLTransform(array('input' => $xml, 'xsl' => self::DWC2DC()));
       }
       // Otherwise, call the parent implementation (transform from MODS).
       if (empty($this->dc)) {
