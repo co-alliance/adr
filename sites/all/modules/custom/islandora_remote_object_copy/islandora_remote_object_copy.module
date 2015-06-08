@@ -279,6 +279,7 @@ function islandora_remote_object_copy_create_collection($fedora_object, $parent_
     'DC',
     'POLICY',
     'COLLECTION_POLICY',
+    'MARC',
   );
 
   $islandora_object = islandora_object_load($fedora_object->id);
@@ -341,6 +342,7 @@ function islandora_remote_object_copy_create_compound_object($fedora_object, $pa
     'DC',
     'TN',
     'POLICY',
+    'MARC',
   );
   if (empty($islandora_object)) {
     $islandora_object = $tuque->repository->constructObject($fedora_object->id);
@@ -398,6 +400,7 @@ function islandora_remote_object_copy_create_single_object_item($fedora_object_d
       'MODS',
       'DC',
       'POLICY',
+      'MARC',
     );
     $label = $fedora_object->id;
     if ($keep_id) {
