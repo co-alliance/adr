@@ -437,7 +437,7 @@ function islandora_remote_object_copy_create_single_object_item($fedora_object_d
     $ds = $islandora_child_object->constructDatastream($content_datastream);
     $label = $fedora_datastream->label;
     if (empty($label)) {
-      $label = $content_datastream;
+      $label = $fedora_object_datastream->id;
     }
     if (!$keep_id) {
       $label = $fedora_object_datastream->id;
