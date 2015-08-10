@@ -1,6 +1,7 @@
 name = Islandora MARCXML Datastream Retainer
 description = "Creates a MarcXML datastream for original marcxml datastream preservation purposes"
 dependencies[] = islandora
+dependencies[] = islandora_marcxml
 package = Islandora Tools
 version = VERSION
 core = 7.x
