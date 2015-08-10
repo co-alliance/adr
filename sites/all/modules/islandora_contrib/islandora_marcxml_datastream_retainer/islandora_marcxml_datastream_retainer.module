@@ -1,12 +1,50 @@
 <?php
 
 /**
+ * Implements hook_menu_alter().
+ */
+function islandora_marcxml_datastream_retainer_menu_alter(&$items) {
+  $items['islandora/object/%islandora_object/view_mods_as_marcxml']['page callback'] = 'islandora_marcxml_datastream_retainer_view';
+  $items['islandora/object/%islandora_object/download_mods_as_marcxml'] = 'islandora_marcxml_datastream_retainer_download';
+}
+
+/**
  * Implements hook_form_alter().
  */
 function islandora_marcxml_datastream_retainer_form_alter(&$form, &$form_state, $form_id) {
   if ($form_id == 'islandora_marcxml_file_form') {
     $form['next']['#submit'] = array_merge(array('islandora_marcxml_retainer_form_submit'), $form['next']['#submit']);
   }
+}
+
+/**
+ * Uses marcxml datastream for output if it exists.
+ */
+function islandora_marcxml_datastream_retainer_view($islandora_object) {
+  if (!isset($islandora_object['MARCXML'])) {
+    return islandora_marcxml_view($islandora_object);
+  }
+  return array(
+    'link' => array(
+      '#markup' => l(t('Download MARCXML'), "islandora/object/{$object->id}/download_mods_as_marcxml"),
+    ),
+    'marc' => array(
+      '#markup' => islandora_marcxml_run_xsl_transform(array(
+        'input' => $islandora_object['MARCXML']->content,
+        'xsl' => variable_get('islandora_marcxml_marc_to_html_xsl_path', drupal_get_path('module', 'islandora_marcxml') . '/xsl/MARC21slim2HTML.xsl'),
+      )),
+    ),
+  );
+}
+
+/**
+ * Redirects to the marcxml datastream download if it exists.
+ */
+function islandora_marcxml_datastream_retainer_download($islandora_object) {
+  if (!isset($islandora_object['MARCXML'])) {
+    return islandora_marcxml_transform_mods_to_marcxml($islandora_object);
+  }
+  drupal_goto('islandora/object/' . $islandora_object->id . '/datastream/MARCXML/download/MARC.xml');
 }
 
 /**
