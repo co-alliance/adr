@@ -5,7 +5,7 @@
  */
 function islandora_marcxml_datastream_retainer_menu_alter(&$items) {
   $items['islandora/object/%islandora_object/view_mods_as_marcxml']['page callback'] = 'islandora_marcxml_datastream_retainer_view';
-  $items['islandora/object/%islandora_object/download_mods_as_marcxml'] = 'islandora_marcxml_datastream_retainer_download';
+  $items['islandora/object/%islandora_object/download_mods_as_marcxml']['page callback'] = 'islandora_marcxml_datastream_retainer_download';
 }
 
 /**
